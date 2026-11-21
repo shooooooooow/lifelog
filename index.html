@@ -139,11 +139,49 @@
     .btn-sm { width: auto; padding: 6px 12px; font-size: 12px; border-radius: 8px; }
     .btn-danger { background: #fee2e2; color: var(--danger); }
 
+    .item-actions {
+      display: flex; justify-content: flex-end; gap: 5px; margin-top: 5px;
+    }
+    .btn-edit-mini {
+      border: 1px solid #bfdbfe; background: #eff6ff; color: var(--primary);
+      border-radius: 6px; padding: 3px 8px; font-size: 11px; font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-edit-mini:active { background: #dbeafe; }
+    .btn-del-mini {
+      border: 1px solid #fecaca; background: #fef2f2; color: var(--danger);
+      border-radius: 6px; padding: 3px 8px; font-size: 11px; font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-del-mini:active { background: #fee2e2; }
+
     .info-box {
       background: #f8fafc; border: 1px solid var(--border); border-radius: 10px;
       padding: 10px 12px; font-size: 12px; color: var(--muted); margin-bottom: 12px; line-height: 1.6;
     }
     .info-box strong { color: var(--text); }
+
+    /* 編集モーダル */
+    .modal-backdrop {
+      position: fixed; inset: 0; z-index: 60;
+      background: rgba(15, 23, 42, 0.48);
+      display: none; align-items: center; justify-content: center; padding: 16px;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal-card {
+      width: 100%; max-width: 480px; background: var(--card);
+      border-radius: 16px; padding: 16px; box-shadow: 0 12px 32px rgba(0,0,0,0.2);
+      max-height: 90vh; overflow-y: auto;
+    }
+    .modal-head {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .modal-head h2 { margin: 0; font-size: 15px; font-weight: 700; }
+    .modal-close {
+      border: none; background: transparent; font-size: 20px; line-height: 1;
+      color: var(--muted); cursor: pointer; padding: 2px 6px;
+    }
 
     /* グラフ・KPI */
     .period-tabs {
@@ -192,7 +230,7 @@
     .toast {
       position: fixed; top: 64px; left: 50%; transform: translateX(-50%);
       background: #111827; color: #fff; padding: 9px 16px; border-radius: 999px;
-      font-size: 13px; z-index: 50; opacity: 0; pointer-events: none; transition: 0.2s;
+      font-size: 13px; z-index: 70; opacity: 0; pointer-events: none; transition: 0.2s;
     }
     .toast.show { opacity: 0.95; }
   </style>
@@ -204,6 +242,44 @@
   </header>
 
   <div id="toast" class="toast"></div>
+
+  <!-- 記録編集モーダル -->
+  <div id="editModal" class="modal-backdrop" onclick="if (event.target === this) closeEditModal();">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2>✏️ 記録を編集</h2>
+        <button class="modal-close" onclick="closeEditModal()" aria-label="閉じる">×</button>
+      </div>
+      <input type="hidden" id="editRecId" />
+      <div id="editRecMeta" style="font-size:12px; color:var(--muted); margin-bottom:10px;"></div>
+
+      <div class="field">
+        <label for="editRecCat">分類</label>
+        <select id="editRecCat"></select>
+      </div>
+
+      <div class="row-2">
+        <div class="field">
+          <label for="editRecAmt">金額（円）</label>
+          <input id="editRecAmt" type="number" inputmode="numeric" placeholder="空欄可" />
+        </div>
+        <div class="field">
+          <label for="editRecCal">カロリー（kcal）</label>
+          <input id="editRecCal" type="number" inputmode="numeric" placeholder="空欄ならAI再計算" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="editRecMemo">内容メモ</label>
+        <textarea id="editRecMemo" rows="3" placeholder="メモを入力"></textarea>
+      </div>
+
+      <div class="row-2">
+        <button class="btn btn-primary" onclick="saveEditedRecord()">変更を保存</button>
+        <button class="btn btn-sub" onclick="closeEditModal()">キャンセル</button>
+      </div>
+    </div>
+  </div>
 
   <main>
     <!-- ========== 1. 入力タブ ========== -->
@@ -429,6 +505,8 @@
       categories: 'll_categories_v1',
       records: 'll_records_v1',
       queue: 'll_queue_v1',
+      updateQueue: 'll_upd_queue_v1',
+      deleteQueue: 'll_del_queue_v1',
       autoRules: 'll_autorules_v1',
       autoRulesDirty: 'll_autorules_dirty_v1',
       holidays: 'll_holidays_v1'
@@ -446,6 +524,8 @@
       categories: JSON.parse(localStorage.getItem(KEYS.categories) || '[]'),
       records: JSON.parse(localStorage.getItem(KEYS.records) || '[]'),
       queue: JSON.parse(localStorage.getItem(KEYS.queue) || '[]'),
+      updateQueue: JSON.parse(localStorage.getItem(KEYS.updateQueue) || '[]'),
+      deleteQueue: JSON.parse(localStorage.getItem(KEYS.deleteQueue) || '[]'),
       autoRules: JSON.parse(localStorage.getItem(KEYS.autoRules) || '{"fallbackCatId":"","rules":[]}'),
       autoRulesDirty: localStorage.getItem(KEYS.autoRulesDirty) === '1',
       holidaysCache: JSON.parse(localStorage.getItem(KEYS.holidays) || '{"fetchedAt":0,"dates":{}}'),
@@ -745,7 +825,7 @@
       await pushAutoRulesToServer('ルールを削除してシートに反映しました');
     }
 
-    // ====== 1. 入力・ショートカット・3階層連動 ======
+    // ====== 1. 入力・ショートカット・3階層連動・記録編集/削除 ======
     function selectByCategoryId(catId, isManual = true) {
       const cat = state.categories.find(c => c.category_id === catId);
       if (!cat) return;
@@ -879,6 +959,161 @@
       flushQueue();
     }
 
+    function openEditModal(recordId) {
+      const rec = state.records.find(r => r.record_id === recordId);
+      if (!rec) return;
+
+      document.getElementById('editRecId').value = rec.record_id;
+      document.getElementById('editRecMeta').textContent = `記録日: ${rec.date}`;
+
+      const sel = document.getElementById('editRecCat');
+      const cats = activeCategories();
+      let opts = cats.map(c =>
+        `<option value="${c.category_id}">${esc(c.cat1)} › ${esc(c.cat2)} › ${esc(c.cat3)}</option>`
+      ).join('');
+      if (rec.category_id && !cats.some(c => c.category_id === rec.category_id)) {
+        opts = `<option value="${escAttr(rec.category_id)}">${esc(rec.cat1)} › ${esc(rec.cat2)} › ${esc(rec.cat3)}（旧分類）</option>` + opts;
+      }
+      sel.innerHTML = opts;
+      sel.value = rec.category_id || '';
+
+      document.getElementById('editRecAmt').value = rec.amount != null ? rec.amount : '';
+      document.getElementById('editRecCal').value = rec.calories != null ? rec.calories : '';
+      document.getElementById('editRecMemo').value = rec.memo || '';
+
+      document.getElementById('editModal').classList.add('open');
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModal').classList.remove('open');
+    }
+
+    async function saveEditedRecord() {
+      const recordId = document.getElementById('editRecId').value;
+      const rec = state.records.find(r => r.record_id === recordId);
+      if (!rec) return closeEditModal();
+
+      const newCatId = document.getElementById('editRecCat').value;
+      const cat = state.categories.find(c => c.category_id === newCatId);
+      const amtRaw = document.getElementById('editRecAmt').value.trim();
+      const calRaw = document.getElementById('editRecCal').value.trim();
+      const memo = document.getElementById('editRecMemo').value.trim();
+
+      if (!amtRaw && !memo && !calRaw) {
+        return toast('金額・メモ・カロリーのいずれかを入力してください');
+      }
+
+      const newAmount = amtRaw !== '' ? Number(amtRaw) : null;
+      const newCalories = calRaw !== '' ? Number(calRaw) : null;
+      const isFood = cat ? Boolean(cat.is_food) : (rec.cal_status === 'DONE' || rec.cal_status === 'PENDING');
+
+      let newCalStatus = 'NONE';
+      let newCalNote = '';
+      if (newCalories !== null) {
+        if (newCalories === rec.calories && memo === rec.memo && rec.cal_status === 'DONE') {
+          newCalStatus = 'DONE';
+          newCalNote = rec.cal_note || '';
+        } else {
+          newCalStatus = 'FIXED';
+          newCalNote = (newCalories === rec.calories && rec.cal_note) ? rec.cal_note : '手動編集';
+        }
+      } else if (isFood && memo !== '') {
+        newCalStatus = 'PENDING';
+        newCalNote = '';
+      }
+
+      const updatedFields = {
+        record_id: recordId,
+        category_id: newCatId || rec.category_id,
+        cat1: cat ? cat.cat1 : rec.cat1,
+        cat2: cat ? cat.cat2 : rec.cat2,
+        cat3: cat ? cat.cat3 : rec.cat3,
+        amount: newAmount,
+        memo,
+        calories: newCalories,
+        cal_status: newCalStatus,
+        cal_note: newCalNote
+      };
+
+      Object.assign(rec, updatedFields);
+      closeEditModal();
+
+      // 新規未送信キューに入っている場合はキュー内を直接更新
+      const queuedNew = state.queue.find(q => q.record_id === recordId);
+      if (queuedNew) {
+        Object.assign(queuedNew, updatedFields);
+        persistLocal();
+        renderRecentList();
+        updateSyncBadge();
+        toast('未同期の記録を更新しました');
+        flushQueue();
+        return;
+      }
+
+      // サーバー送信済みの場合は編集キューへ追加して即時送信
+      rec._unsynced = true;
+      const existingIdx = state.updateQueue.findIndex(u => u.record_id === recordId);
+      if (existingIdx >= 0) {
+        state.updateQueue[existingIdx] = updatedFields;
+      } else {
+        state.updateQueue.push(updatedFields);
+      }
+
+      persistLocal();
+      renderRecentList();
+      updateSyncBadge();
+
+      const synced = await flushUpdateQueue();
+      if (synced) {
+        toast('記録を更新しました');
+      } else {
+        toast('端末に反映しました（次回同期時にシートへ反映）');
+      }
+    }
+
+    async function deleteRecord(recordId) {
+      const rec = state.records.find(r => r.record_id === recordId);
+      if (!rec) return;
+
+      const summaryLines = [
+        `${rec.date}  ${rec.cat1} › ${rec.cat2} › ${rec.cat3}`,
+        rec.memo ? rec.memo : '(メモなし)',
+        [
+          rec.amount != null ? `¥${rec.amount.toLocaleString()}` : '',
+          rec.calories != null ? `${rec.calories} kcal` : ''
+        ].filter(Boolean).join(' / ')
+      ].filter(Boolean).join('\n');
+
+      if (!confirm(`この記録を削除しますか？\n\n${summaryLines}`)) return;
+
+      state.records = state.records.filter(r => r.record_id !== recordId);
+      state.updateQueue = state.updateQueue.filter(u => u.record_id !== recordId);
+
+      const wasUnsynced = state.queue.some(q => q.record_id === recordId);
+      if (wasUnsynced) {
+        state.queue = state.queue.filter(q => q.record_id !== recordId);
+        persistLocal();
+        renderRecentList();
+        updateSyncBadge();
+        toast('未同期の記録を削除しました');
+        return;
+      }
+
+      if (!state.deleteQueue.includes(recordId)) {
+        state.deleteQueue.push(recordId);
+      }
+      persistLocal();
+      renderRecentList();
+      updateSyncBadge();
+
+      const synced = await flushDeleteQueue();
+      if (synced) {
+        toast('記録を削除しました');
+      } else {
+        toast('端末から削除しました（次回同期時にシートへ反映）');
+      }
+    }
+
     function renderRecentList() {
       const listEl = document.getElementById('recentList');
       const items = [...state.records].slice(-10).reverse();
@@ -895,14 +1130,18 @@
         const rightCal = r.calories != null ? `${r.calories} kcal` : '';
         return `
           <div class="list-item" style="align-items:flex-start;">
-            <div>
+            <div style="min-width:0; flex:1;">
               <div>${badges.join('')}</div>
-              <div style="margin-top:3px;">${esc(r.memo || '(メモなし)')}</div>
+              <div style="margin-top:3px; word-break:break-word;">${esc(r.memo || '(メモなし)')}</div>
               <div style="font-size:11px;color:var(--muted);margin-top:2px;">${esc(r.date)} ${r.cal_note ? '・' + esc(r.cal_note) : ''}</div>
             </div>
             <div style="text-align:right;white-space:nowrap;font-weight:700;">
               <div>${rightAmt}</div>
               <div style="font-size:12px;color:var(--warn);">${rightCal}</div>
+              <div class="item-actions">
+                <button class="btn-edit-mini" onclick="openEditModal('${escAttr(r.record_id)}')">編集</button>
+                <button class="btn-del-mini" onclick="deleteRecord('${escAttr(r.record_id)}')">削除</button>
+              </div>
             </div>
           </div>
         `;
@@ -1181,12 +1420,55 @@
         await postGas({ action: 'add_records', records: batch });
         const sentIds = new Set(batch.map(x => x.record_id));
         state.queue = state.queue.filter(x => !sentIds.has(x.record_id));
-        state.records.forEach(r => { if (sentIds.has(r.record_id)) delete r._unsynced; });
+        const pendingUpdIds = new Set(state.updateQueue.map(u => u.record_id));
+        state.records.forEach(r => {
+          if (sentIds.has(r.record_id) && !pendingUpdIds.has(r.record_id)) delete r._unsynced;
+        });
         persistLocal();
         renderRecentList();
         updateSyncBadge();
       } catch (_) {
         updateSyncBadge();
+      }
+    }
+
+    async function flushUpdateQueue() {
+      if (!state.updateQueue.length || !navigator.onLine || !state.settings.gasUrl || !state.settings.token) {
+        updateSyncBadge();
+        return false;
+      }
+      const batch = [...state.updateQueue];
+      try {
+        await postGas({ action: 'update_records', records: batch });
+        const doneIds = new Set(batch.map(u => u.record_id));
+        state.updateQueue = state.updateQueue.filter(u => !doneIds.has(u.record_id));
+        state.records.forEach(r => { if (doneIds.has(r.record_id)) delete r._unsynced; });
+        persistLocal();
+        renderRecentList();
+        updateSyncBadge();
+        return true;
+      } catch (_) {
+        updateSyncBadge();
+        return false;
+      }
+    }
+
+    async function flushDeleteQueue() {
+      if (!state.deleteQueue.length || !navigator.onLine || !state.settings.gasUrl || !state.settings.token) {
+        updateSyncBadge();
+        return false;
+      }
+      const batch = [...state.deleteQueue];
+      try {
+        await postGas({ action: 'delete_records', record_ids: batch });
+        const doneIds = new Set(batch);
+        state.deleteQueue = state.deleteQueue.filter(id => !doneIds.has(id));
+        persistLocal();
+        updateSyncBadge();
+        return true;
+      } catch (_) {
+        updateSyncBadge();
+        return false;
       }
     }
 
@@ -1197,8 +1479,9 @@
         return;
       }
       await flushQueue();
+      await flushUpdateQueue();
+      await flushDeleteQueue();
 
-      // 未送信の自動デフォルトルールがあれば先にサーバーへ送信
       if (state.autoRulesDirty && navigator.onLine) {
         try {
           const r = await postGas({ action: 'save_auto_rules', autoRules: state.autoRules });
@@ -1214,11 +1497,17 @@
         if (!data.ok) throw new Error(data.error);
 
         state.categories = data.categories;
-        const serverIds = new Set(data.records.map(r => r.record_id));
-        const pendingLocal = state.queue.filter(r => !serverIds.has(r.record_id));
-        state.records = [...data.records, ...pendingLocal];
+        const pendingDelSet = new Set(state.deleteQueue);
+        const pendingUpdMap = new Map(state.updateQueue.map(u => [u.record_id, u]));
 
-        // 曜日・時間帯ルールの同期（サーバー側が空でローカルに既存設定がある場合は初回自動移行）
+        const serverRecords = (data.records || [])
+          .filter(r => !pendingDelSet.has(r.record_id))
+          .map(r => pendingUpdMap.has(r.record_id) ? { ...r, ...pendingUpdMap.get(r.record_id), _unsynced: true } : r);
+
+        const serverIds = new Set(serverRecords.map(r => r.record_id));
+        const pendingLocal = state.queue.filter(r => !serverIds.has(r.record_id) && !pendingDelSet.has(r.record_id));
+        state.records = [...serverRecords, ...pendingLocal];
+
         if (data.autoRules && !state.autoRulesDirty) {
           const srvEmpty = !data.autoRules.fallbackCatId && !(data.autoRules.rules && data.autoRules.rules.length);
           const locHas = Boolean(state.autoRules.fallbackCatId) || (state.autoRules.rules && state.autoRules.rules.length > 0);
@@ -1256,11 +1545,11 @@
 
     function updateSyncBadge() {
       const el = document.getElementById('syncStatus');
+      const pendingCount = state.queue.length + state.updateQueue.length + state.deleteQueue.length + (state.autoRulesDirty ? 1 : 0);
       if (!state.settings.gasUrl) {
         el.textContent = '未設定'; el.className = 'status-pill';
-      } else if (state.queue.length > 0 || state.autoRulesDirty) {
-        const cnt = state.queue.length + (state.autoRulesDirty ? 1 : 0);
-        el.textContent = `未同期 ${cnt}件`; el.className = 'status-pill pending';
+      } else if (pendingCount > 0) {
+        el.textContent = `未同期 ${pendingCount}件`; el.className = 'status-pill pending';
       } else {
         el.textContent = '同期済'; el.className = 'status-pill ok';
       }
@@ -1270,6 +1559,8 @@
       localStorage.setItem(KEYS.categories, JSON.stringify(state.categories));
       localStorage.setItem(KEYS.records, JSON.stringify(state.records));
       localStorage.setItem(KEYS.queue, JSON.stringify(state.queue));
+      localStorage.setItem(KEYS.updateQueue, JSON.stringify(state.updateQueue));
+      localStorage.setItem(KEYS.deleteQueue, JSON.stringify(state.deleteQueue));
     }
 
     function renderAll() {
