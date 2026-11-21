@@ -1052,7 +1052,7 @@
       if (!rec) return;
 
       document.getElementById('editRecId').value = rec.record_id;
-      document.getElementById('editRecMeta').textContent = `記録日: ${rec.date}`;
+      document.getElementById('editRecMeta').textContent = `記録日時: ${formatDateTime(rec)}`;
 
       const sel = document.getElementById('editRecCat');
       const cats = activeCategories();
@@ -1164,7 +1164,7 @@
       if (!rec) return;
 
       const summaryLines = [
-        `${rec.date}  ${rec.cat1} › ${rec.cat2} › ${rec.cat3}`,
+        `${formatDateTime(rec)}  ${rec.cat1} › ${rec.cat2} › ${rec.cat3}`,
         rec.memo ? rec.memo : '(メモなし)',
         [
           rec.amount != null ? `¥${rec.amount.toLocaleString()}` : '',
@@ -1207,7 +1207,6 @@
     function toSortMillis(rec) {
       const ts = String(rec.timestamp || '').trim();
       if (ts) {
-        // "YYYY-MM-DD HH:mm:ss" 形式はJSTとして扱う
         const normalized = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(ts)
           ? ts.replace(' ', 'T') + '+09:00'
           : ts;
@@ -1216,6 +1215,23 @@
       }
       const d = Date.parse((rec.date || '1970-01-01') + 'T00:00:00+09:00');
       return Number.isNaN(d) ? 0 : d;
+    }
+
+    function formatDateTime(rec) {
+      const ts = String(rec.timestamp || '').trim();
+      const jstMatch = ts.match(/^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2})/);
+      if (jstMatch) {
+        return `${jstMatch[1]} ${jstMatch[2]}`;
+      }
+      if (ts) {
+        const d = new Date(ts);
+        if (!Number.isNaN(d.getTime())) {
+          const hh = String(d.getHours()).padStart(2, '0');
+          const mm = String(d.getMinutes()).padStart(2, '0');
+          return `${formatDateJst(d)} ${hh}:${mm}`;
+        }
+      }
+      return rec.date || '';
     }
 
     function renderRecordRowHtml(r) {
@@ -1230,7 +1246,7 @@
           <div style="min-width:0; flex:1;">
             <div>${badges.join('')}</div>
             <div style="margin-top:3px; word-break:break-word;">${esc(r.memo || '(メモなし)')}</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px;">${esc(r.date)} ${r.cal_note ? '・' + esc(r.cal_note) : ''}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">${esc(formatDateTime(r))} ${r.cal_note ? '・' + esc(r.cal_note) : ''}</div>
           </div>
           <div style="text-align:right;white-space:nowrap;font-weight:700;">
             <div>${rightAmt}</div>
@@ -1256,7 +1272,6 @@
 
     // ====== 2. 記録（履歴検索）タブ ======
     function collectAllTaxonomyPairs() {
-      // マスタ（表示順優先）＋ 過去記録にある旧分類も含めて重複除去
       const items = [];
       const seen = new Set();
       const push = (c1, c2, c3) => {
@@ -1277,14 +1292,12 @@
       const allPairs = collectAllTaxonomyPairs();
       const f = state.histFilter;
 
-      // 大分類
       const cat1Opts = [...new Set(allPairs.map(p => p.cat1).filter(Boolean))];
       if (f.cat1 && !cat1Opts.includes(f.cat1)) f.cat1 = '';
       const sel1 = document.getElementById('histCat1');
       sel1.innerHTML = `<option value="">すべて</option>` + cat1Opts.map(v => `<option value="${escAttr(v)}">${esc(v)}</option>`).join('');
       sel1.value = f.cat1;
 
-      // 中分類（大分類で連動絞り込み）
       const cat2Source = f.cat1 ? allPairs.filter(p => p.cat1 === f.cat1) : allPairs;
       const cat2Opts = [...new Set(cat2Source.map(p => p.cat2).filter(Boolean))];
       if (f.cat2 && !cat2Opts.includes(f.cat2)) f.cat2 = '';
@@ -1292,7 +1305,6 @@
       sel2.innerHTML = `<option value="">すべて</option>` + cat2Opts.map(v => `<option value="${escAttr(v)}">${esc(v)}</option>`).join('');
       sel2.value = f.cat2;
 
-      // 小分類（大分類＋中分類で連動絞り込み）
       const cat3Source = cat2Source.filter(p => !f.cat2 || p.cat2 === f.cat2);
       const cat3Opts = [...new Set(cat3Source.map(p => p.cat3).filter(Boolean))];
       if (f.cat3 && !cat3Opts.includes(f.cat3)) f.cat3 = '';
