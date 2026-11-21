@@ -81,6 +81,11 @@
     .path-tag.l2 { background: var(--l2-bg); color: var(--l2); }
     .path-tag.l3 { background: var(--l3-bg); color: var(--l3); }
     .path-sep { color: #9ca3af; font-weight: 400; }
+    .auto-reset-btn {
+      margin-left: auto; border: 1px solid var(--border); background: #fff;
+      border-radius: 999px; padding: 3px 8px; font-size: 11px; color: var(--muted);
+      cursor: pointer; font-weight: 600;
+    }
 
     /* 階層別ボックス */
     .cat-group {
@@ -118,11 +123,11 @@
     /* フォーム */
     .field { margin-bottom: 12px; }
     .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; font-weight: 600; }
-    input[type="text"], input[type="number"], input[type="url"], input[type="password"], textarea, select {
-      width: 100%; padding: 11px 12px; font-size: 16px; border: 1.5px solid var(--border);
+    input[type="text"], input[type="number"], input[type="url"], input[type="password"], input[type="time"], textarea, select {
+      width: 100%; padding: 11px 12px; font-size: 15px; border: 1.5px solid var(--border);
       border-radius: 10px; background: #fff; color: var(--text); outline: none;
     }
-    input:focus, textarea:focus { border-color: var(--primary); }
+    input:focus, textarea:focus, select:focus { border-color: var(--primary); }
     .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .btn {
       width: 100%; border: none; border-radius: 12px; padding: 13px;
@@ -133,6 +138,12 @@
     .btn-sub { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
     .btn-sm { width: auto; padding: 6px 12px; font-size: 12px; border-radius: 8px; }
     .btn-danger { background: #fee2e2; color: var(--danger); }
+
+    .info-box {
+      background: #f8fafc; border: 1px solid var(--border); border-radius: 10px;
+      padding: 10px 12px; font-size: 12px; color: var(--muted); margin-bottom: 12px; line-height: 1.6;
+    }
+    .info-box strong { color: var(--text); }
 
     /* グラフ・KPI */
     .period-tabs {
@@ -152,7 +163,7 @@
 
     /* リスト */
     .list-item {
-      display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;
+      display: flex; justify-content: space-between; align-items: center; gap: 10px;
       padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px;
     }
     .list-item:last-child { border-bottom: none; }
@@ -316,6 +327,56 @@
 
     <!-- ========== 4. 設定タブ ========== -->
     <section id="view-settings" class="view">
+      <!-- 曜日・時間帯デフォルト設定（シート自動同期） -->
+      <div class="card">
+        <p class="section-title">🕒 曜日・時間帯の自動デフォルト設定（スマホ・PC自動同期）</p>
+        <div id="autoRuleStatus" class="info-box">判定状況を読み込み中...</div>
+
+        <div class="field">
+          <label for="fallbackCatSelect">基本のデフォルト分類（ルール未設定の時間帯に適用）</label>
+          <select id="fallbackCatSelect" onchange="saveFallbackCategory()"></select>
+        </div>
+
+        <hr style="border:none; border-top:1px solid var(--border); margin:14px 0;" />
+        <p class="section-title">➕ 曜日・時間帯ルールを追加</p>
+        <div class="field">
+          <label for="ruleDayType">曜日区分（個別曜日 ＞ 平日・土日祝 ＞ 毎日 の順で優先）</label>
+          <select id="ruleDayType">
+            <option value="weekday">平日（月〜金・祝日を除く）</option>
+            <option value="weekend_holiday">土日祝（土・日・日本の祝日）</option>
+            <option value="all">毎日</option>
+            <option value="mon">月曜のみ</option>
+            <option value="tue">火曜のみ</option>
+            <option value="wed">水曜のみ</option>
+            <option value="thu">木曜のみ</option>
+            <option value="fri">金曜のみ</option>
+            <option value="sat">土曜のみ</option>
+            <option value="sun">日曜のみ</option>
+          </select>
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label for="ruleStart">開始時刻</label>
+            <input id="ruleStart" type="time" value="06:00" />
+          </div>
+          <div class="field">
+            <label for="ruleEnd">終了時刻</label>
+            <input id="ruleEnd" type="time" value="09:59" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="ruleCatSelect">自動で選ぶ分類</label>
+          <select id="ruleCatSelect"></select>
+        </div>
+        <button class="btn btn-primary" onclick="addAutoRule()">このルールを追加して同期</button>
+
+        <div style="margin-top:14px;">
+          <p class="section-title">📋 登録済みの時間帯ルール（スプレッドシート同期）</p>
+          <div id="autoRuleList"></div>
+        </div>
+      </div>
+
+      <!-- GAS接続設定 -->
       <div class="card">
         <p class="section-title">⚙️ GAS 接続設定（端末ローカル保存）</p>
         <div class="field">
@@ -367,7 +428,17 @@
       settings: 'll_settings_v1',
       categories: 'll_categories_v1',
       records: 'll_records_v1',
-      queue: 'll_queue_v1'
+      queue: 'll_queue_v1',
+      autoRules: 'll_autorules_v1',
+      autoRulesDirty: 'll_autorules_dirty_v1',
+      holidays: 'll_holidays_v1'
+    };
+
+    const DAY_LABELS = {
+      weekday: '平日（祝除く）',
+      weekend_holiday: '土日祝',
+      all: '毎日',
+      mon: '月曜', tue: '火曜', wed: '水曜', thu: '木曜', fri: '金曜', sat: '土曜', sun: '日曜'
     };
 
     const state = {
@@ -375,7 +446,12 @@
       categories: JSON.parse(localStorage.getItem(KEYS.categories) || '[]'),
       records: JSON.parse(localStorage.getItem(KEYS.records) || '[]'),
       queue: JSON.parse(localStorage.getItem(KEYS.queue) || '[]'),
+      autoRules: JSON.parse(localStorage.getItem(KEYS.autoRules) || '{"fallbackCatId":"","rules":[]}'),
+      autoRulesDirty: localStorage.getItem(KEYS.autoRulesDirty) === '1',
+      holidaysCache: JSON.parse(localStorage.getItem(KEYS.holidays) || '{"fetchedAt":0,"dates":{}}'),
       selCat1: '', selCat2: '', selCatId: '',
+      userManuallyPicked: false,
+      hasUrlCatParam: false,
       period: 'daily',
       charts: { spend: null, cal: null, pie: null }
     };
@@ -389,7 +465,7 @@
     }
 
     // ====== 初期化 ======
-    window.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('DOMContentLoaded', async () => {
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js').catch(() => {});
       }
@@ -413,19 +489,37 @@
       const params = new URLSearchParams(location.search);
       const urlCat = params.get('cat');
       if (urlCat) {
-        selectByCategoryId(urlCat);
+        state.hasUrlCatParam = true;
+        selectByCategoryId(urlCat, false);
       } else {
-        const firstActive = activeCategories()[0];
-        if (firstActive) selectByCategoryId(firstActive.category_id);
+        applyAutoDefaultCategory(true);
       }
 
       renderAll();
       updateSyncBadge();
 
+      refreshHolidaysIfNeeded().then((updated) => {
+        if (updated && !state.userManuallyPicked && !state.hasUrlCatParam) {
+          applyAutoDefaultCategory(false);
+        }
+        renderAutoRuleSettings();
+      });
+
       if (state.settings.gasUrl && state.settings.token) {
         syncAll(false);
       }
       window.addEventListener('online', () => syncAll(false));
+
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && !state.hasUrlCatParam) {
+          const amt = document.getElementById('inpAmount').value.trim();
+          const memo = document.getElementById('inpMemo').value.trim();
+          if (!amt && !memo) {
+            state.userManuallyPicked = false;
+            applyAutoDefaultCategory(false);
+          }
+        }
+      });
     });
 
     function switchView(name) {
@@ -436,7 +530,10 @@
       });
       if (name === 'charts') renderCharts();
       if (name === 'categories') renderCategoryManager();
-      if (name === 'settings') renderShortcutUrlSelect();
+      if (name === 'settings') {
+        renderAutoRuleSettings();
+        renderShortcutUrlSelect();
+      }
     }
 
     function activeCategories() {
@@ -450,10 +547,209 @@
       setTimeout(() => el.classList.remove('show'), 2200);
     }
 
+    // ====== 祝日取得＆曜日・時間帯デフォルト判定 ======
+    async function refreshHolidaysIfNeeded() {
+      const ONE_WEEK = 7 * 24 * 60 * 60 * 1000;
+      const now = Date.now();
+      const hasData = Object.keys(state.holidaysCache.dates || {}).length > 0;
+      if (hasData && (now - (state.holidaysCache.fetchedAt || 0) < ONE_WEEK)) return false;
+      if (!navigator.onLine) return false;
+
+      try {
+        const res = await fetch('https://holidays-jp.github.io/api/v1/date.json');
+        if (!res.ok) return false;
+        const dates = await res.json();
+        state.holidaysCache = { fetchedAt: now, dates };
+        localStorage.setItem(KEYS.holidays, JSON.stringify(state.holidaysCache));
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    function toMinutes(hhmm) {
+      const [h, m] = String(hhmm || '00:00').split(':').map(Number);
+      return (h || 0) * 60 + (m || 0);
+    }
+
+    function isTimeInRange(nowMin, startStr, endStr) {
+      const s = toMinutes(startStr);
+      const e = toMinutes(endStr);
+      if (s <= e) return nowMin >= s && nowMin <= e;
+      return nowMin >= s || nowMin <= e;
+    }
+
+    function resolveAutoDefault(dateObj = new Date()) {
+      const cats = activeCategories();
+      const activeIds = new Set(cats.map(c => c.category_id));
+      const dateStr = formatDateJst(dateObj);
+      const dayIdx = dateObj.getDay();
+      const dayCode = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'][dayIdx];
+      const holidayName = (state.holidaysCache.dates || {})[dateStr] || '';
+      const isWeekendOrHoliday = (dayIdx === 0 || dayIdx === 6 || Boolean(holidayName));
+      const nowMin = dateObj.getHours() * 60 + dateObj.getMinutes();
+
+      const validRules = (state.autoRules.rules || []).filter(r => activeIds.has(r.category_id));
+
+      const matchPriority = (r) => {
+        if (!isTimeInRange(nowMin, r.start, r.end)) return 0;
+        if (r.dayType === dayCode) return 3;
+        if (r.dayType === 'weekday' && !isWeekendOrHoliday) return 2;
+        if (r.dayType === 'weekend_holiday' && isWeekendOrHoliday) return 2;
+        if (r.dayType === 'all') return 1;
+        return 0;
+      };
+
+      let bestRule = null;
+      let bestScore = 0;
+      for (const r of validRules) {
+        const score = matchPriority(r);
+        if (score > bestScore) {
+          bestScore = score;
+          bestRule = r;
+        }
+      }
+
+      if (bestRule) {
+        return {
+          catId: bestRule.category_id,
+          reason: `ルール適用（${DAY_LABELS[bestRule.dayType]} ${bestRule.start}〜${bestRule.end}）`,
+          isWeekendOrHoliday, holidayName, dayIdx
+        };
+      }
+
+      if (state.autoRules.fallbackCatId && activeIds.has(state.autoRules.fallbackCatId)) {
+        return {
+          catId: state.autoRules.fallbackCatId,
+          reason: '基本デフォルト適用（ルール未設定の時間帯）',
+          isWeekendOrHoliday, holidayName, dayIdx
+        };
+      }
+
+      return {
+        catId: cats[0]?.category_id || '',
+        reason: '先頭の分類（デフォルト未設定）',
+        isWeekendOrHoliday, holidayName, dayIdx
+      };
+    }
+
+    function applyAutoDefaultCategory(silent = false) {
+      const resolved = resolveAutoDefault(new Date());
+      if (resolved.catId) {
+        selectByCategoryId(resolved.catId, false);
+        if (!silent) toast('現在時刻のデフォルトに切り替えました');
+      }
+    }
+
+    function renderAutoRuleSettings() {
+      const cats = activeCategories();
+      const optionsHtml = cats.map(c =>
+        `<option value="${c.category_id}">${esc(c.cat1)} › ${esc(c.cat2)} › ${esc(c.cat3)}</option>`
+      ).join('');
+
+      const fbSel = document.getElementById('fallbackCatSelect');
+      fbSel.innerHTML = `<option value="">（未設定：先頭の分類を使用）</option>` + optionsHtml;
+      fbSel.value = state.autoRules.fallbackCatId || '';
+
+      const ruleSel = document.getElementById('ruleCatSelect');
+      const prevVal = ruleSel.value;
+      ruleSel.innerHTML = optionsHtml;
+      if (prevVal && cats.some(c => c.category_id === prevVal)) ruleSel.value = prevVal;
+
+      const now = new Date();
+      const res = resolveAutoDefault(now);
+      const dayJp = ['日','月','火','水','木','金','土'][res.dayIdx];
+      const hm = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+      const matchedCat = cats.find(c => c.category_id === res.catId);
+      const holCount = Object.keys(state.holidaysCache.dates || {}).length;
+      const dayKind = res.holidayName ? `祝日（${res.holidayName}）` : (res.isWeekendOrHoliday ? '土日祝扱い' : '平日扱い');
+      const syncNote = state.autoRulesDirty ? ' <span class="badge badge-off">未同期</span>' : '';
+
+      document.getElementById('autoRuleStatus').innerHTML = `
+        <div>現在: <strong>${dayJp}曜 ${hm}（${esc(dayKind)}）</strong>${syncNote}</div>
+        <div>適用中: <strong>${matchedCat ? esc(`${matchedCat.cat1} › ${matchedCat.cat2} › ${matchedCat.cat3}`) : 'なし'}</strong>（${esc(res.reason)}）</div>
+        <div>日本の祝日データ: ${holCount > 0 ? `取得済（${holCount}日分・自動更新）` : '未取得（オンライン接続時に自動取得）'}</div>
+      `;
+
+      const listEl = document.getElementById('autoRuleList');
+      const rules = state.autoRules.rules || [];
+      if (!rules.length) {
+        listEl.innerHTML = '<div style="color:var(--muted);font-size:12px;">まだ時間帯ルールがありません（全時間帯で基本デフォルトが適用されます）。</div>';
+        return;
+      }
+      const catMap = Object.fromEntries(state.categories.map(c => [c.category_id, c]));
+      listEl.innerHTML = rules.map((r, idx) => {
+        const c = catMap[r.category_id];
+        const catText = c ? `${c.cat1} › ${c.cat2} › ${c.cat3}` : '(削除済みの分類)';
+        return `
+          <div class="list-item">
+            <div>
+              <div><span class="badge">${esc(DAY_LABELS[r.dayType] || r.dayType)}</span> <strong>${esc(r.start)} 〜 ${esc(r.end)}</strong></div>
+              <div style="font-size:12px;color:var(--muted);margin-top:3px;">${esc(catText)}</div>
+            </div>
+            <button class="btn btn-danger btn-sm" onclick="deleteAutoRule(${idx})">削除</button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function persistAutoRulesLocal(dirty) {
+      state.autoRulesDirty = dirty;
+      localStorage.setItem(KEYS.autoRules, JSON.stringify(state.autoRules));
+      localStorage.setItem(KEYS.autoRulesDirty, dirty ? '1' : '0');
+    }
+
+    async function pushAutoRulesToServer(successMsg) {
+      persistAutoRulesLocal(true);
+      renderAutoRuleSettings();
+      updateSyncBadge();
+
+      if (!state.settings.gasUrl || !state.settings.token || !navigator.onLine) {
+        toast('端末に保存しました（次回オンライン同期時に反映）');
+        return;
+      }
+      try {
+        const res = await postGas({ action: 'save_auto_rules', autoRules: state.autoRules });
+        if (res.autoRules) state.autoRules = res.autoRules;
+        persistAutoRulesLocal(false);
+        renderAutoRuleSettings();
+        updateSyncBadge();
+        if (successMsg) toast(successMsg);
+      } catch (err) {
+        toast('シート同期に失敗（次回再送します）: ' + err.message);
+      }
+    }
+
+    async function saveFallbackCategory() {
+      state.autoRules.fallbackCatId = document.getElementById('fallbackCatSelect').value;
+      if (!state.userManuallyPicked) applyAutoDefaultCategory(true);
+      await pushAutoRulesToServer('基本デフォルトをシートに保存しました');
+    }
+
+    async function addAutoRule() {
+      const dayType = document.getElementById('ruleDayType').value;
+      const start = document.getElementById('ruleStart').value;
+      const end = document.getElementById('ruleEnd').value;
+      const category_id = document.getElementById('ruleCatSelect').value;
+      if (!start || !end || !category_id) return toast('時刻と分類を選択してください');
+
+      state.autoRules.rules = state.autoRules.rules || [];
+      state.autoRules.rules.push({ id: 'ar_' + Date.now(), dayType, start, end, category_id });
+      if (!state.userManuallyPicked) applyAutoDefaultCategory(true);
+      await pushAutoRulesToServer('ルールを追加してシートに保存しました');
+    }
+
+    async function deleteAutoRule(index) {
+      state.autoRules.rules.splice(index, 1);
+      if (!state.userManuallyPicked) applyAutoDefaultCategory(true);
+      await pushAutoRulesToServer('ルールを削除してシートに反映しました');
+    }
+
     // ====== 1. 入力・ショートカット・3階層連動 ======
-    function selectByCategoryId(catId) {
+    function selectByCategoryId(catId, isManual = true) {
       const cat = state.categories.find(c => c.category_id === catId);
       if (!cat) return;
+      if (isManual) state.userManuallyPicked = true;
       state.selCat1 = cat.cat1;
       state.selCat2 = cat.cat2;
       state.selCatId = cat.category_id;
@@ -466,7 +762,6 @@
     function renderInputControls() {
       const cats = activeCategories();
 
-      // ショートカット描画（0件のときはカードごと自動非表示）
       const scCard = document.getElementById('shortcutCard');
       const scEl = document.getElementById('shortcutGrid');
       const shortcuts = cats.filter(c => c.shortcut_label);
@@ -476,45 +771,41 @@
         scCard.style.display = 'block';
         scEl.innerHTML = shortcuts.map(c => `
           <button class="shortcut-btn ${c.category_id === state.selCatId ? 'selected' : ''}"
-                  onclick="selectByCategoryId('${c.category_id}')">${esc(c.shortcut_label)}</button>
+                  onclick="selectByCategoryId('${c.category_id}', true)">${esc(c.shortcut_label)}</button>
         `).join('');
       }
 
-      // 大分類
       const cat1List = [...new Set(cats.map(c => c.cat1))];
       if (!cat1List.includes(state.selCat1)) state.selCat1 = cat1List[0] || '';
       document.getElementById('cat1Chips').innerHTML = cat1List.map(c1 => `
         <button class="chip ${c1 === state.selCat1 ? 'selected' : ''}" onclick="onSelectCat1('${escAttr(c1)}')">${esc(c1)}</button>
       `).join('');
 
-      // 中分類（大分類で絞り込み）
       const cat2List = [...new Set(cats.filter(c => c.cat1 === state.selCat1).map(c => c.cat2))];
       if (!cat2List.includes(state.selCat2)) state.selCat2 = cat2List[0] || '';
       document.getElementById('cat2Chips').innerHTML = cat2List.map(c2 => `
         <button class="chip ${c2 === state.selCat2 ? 'selected' : ''}" onclick="onSelectCat2('${escAttr(c2)}')">${esc(c2)}</button>
       `).join('');
 
-      // 小分類（大＋中で絞り込み）
       const cat3List = cats.filter(c => c.cat1 === state.selCat1 && c.cat2 === state.selCat2);
       if (!cat3List.some(c => c.category_id === state.selCatId)) {
         state.selCatId = cat3List[0]?.category_id || '';
       }
       document.getElementById('cat3Chips').innerHTML = cat3List.map(c => `
-        <button class="chip ${c.category_id === state.selCatId ? 'selected' : ''}" onclick="selectByCategoryId('${c.category_id}')">${esc(c.cat3)}</button>
+        <button class="chip ${c.category_id === state.selCatId ? 'selected' : ''}" onclick="selectByCategoryId('${c.category_id}', true)">${esc(c.cat3)}</button>
       `).join('');
 
-      // 選択中パスとカロリー入力欄の更新
       const curCat = cats.find(c => c.category_id === state.selCatId);
       const pathEl = document.getElementById('selectedPath');
       if (curCat) {
         pathEl.innerHTML = `
-          <span style="color:var(--muted);font-weight:600;margin-right:2px;">選択中:</span>
           <span class="path-tag l1">${esc(curCat.cat1)}</span>
           <span class="path-sep">›</span>
           <span class="path-tag l2">${esc(curCat.cat2)}</span>
           <span class="path-sep">›</span>
           <span class="path-tag l3">${esc(curCat.cat3)}</span>
-          ${curCat.is_food ? '<span style="margin-left:auto;font-size:11px;color:var(--warn);">🍽️ AIカロリー対象</span>' : ''}
+          ${curCat.is_food ? '<span style="font-size:11px;color:var(--warn);">🍽️</span>' : ''}
+          <button class="auto-reset-btn" onclick="state.userManuallyPicked=false; applyAutoDefaultCategory(false);">🕒 自動</button>
         `;
       } else {
         pathEl.textContent = '分類を選択してください';
@@ -525,18 +816,20 @@
     }
 
     function onSelectCat1(c1) {
+      state.userManuallyPicked = true;
       state.selCat1 = c1;
       const cats = activeCategories().filter(c => c.cat1 === c1);
       state.selCat2 = cats[0]?.cat2 || '';
       const c3 = cats.find(c => c.cat2 === state.selCat2);
-      if (c3) selectByCategoryId(c3.category_id);
+      if (c3) selectByCategoryId(c3.category_id, true);
       else renderInputControls();
     }
 
     function onSelectCat2(c2) {
+      state.userManuallyPicked = true;
       state.selCat2 = c2;
       const c3 = activeCategories().find(c => c.cat1 === state.selCat1 && c.cat2 === c2);
-      if (c3) selectByCategoryId(c3.category_id);
+      if (c3) selectByCategoryId(c3.category_id, true);
       else renderInputControls();
     }
 
@@ -601,7 +894,7 @@
         const rightAmt = r.amount != null ? `¥${r.amount.toLocaleString()}` : '';
         const rightCal = r.calories != null ? `${r.calories} kcal` : '';
         return `
-          <div class="list-item">
+          <div class="list-item" style="align-items:flex-start;">
             <div>
               <div>${badges.join('')}</div>
               <div style="margin-top:3px;">${esc(r.memo || '(メモなし)')}</div>
@@ -904,6 +1197,16 @@
         return;
       }
       await flushQueue();
+
+      // 未送信の自動デフォルトルールがあれば先にサーバーへ送信
+      if (state.autoRulesDirty && navigator.onLine) {
+        try {
+          const r = await postGas({ action: 'save_auto_rules', autoRules: state.autoRules });
+          if (r.autoRules) state.autoRules = r.autoRules;
+          persistAutoRulesLocal(false);
+        } catch (_) {}
+      }
+
       try {
         const url = `${state.settings.gasUrl}?action=bootstrap&token=${encodeURIComponent(state.settings.token)}`;
         const res = await fetch(url);
@@ -915,7 +1218,22 @@
         const pendingLocal = state.queue.filter(r => !serverIds.has(r.record_id));
         state.records = [...data.records, ...pendingLocal];
 
+        // 曜日・時間帯ルールの同期（サーバー側が空でローカルに既存設定がある場合は初回自動移行）
+        if (data.autoRules && !state.autoRulesDirty) {
+          const srvEmpty = !data.autoRules.fallbackCatId && !(data.autoRules.rules && data.autoRules.rules.length);
+          const locHas = Boolean(state.autoRules.fallbackCatId) || (state.autoRules.rules && state.autoRules.rules.length > 0);
+          if (srvEmpty && locHas) {
+            postGas({ action: 'save_auto_rules', autoRules: state.autoRules }).catch(() => {});
+          } else {
+            state.autoRules = data.autoRules;
+            persistAutoRulesLocal(false);
+          }
+        }
+
         persistLocal();
+        if (!state.userManuallyPicked && !state.hasUrlCatParam) {
+          applyAutoDefaultCategory(true);
+        }
         renderAll();
         updateSyncBadge();
         if (showMsg) toast('同期が完了しました');
@@ -940,8 +1258,9 @@
       const el = document.getElementById('syncStatus');
       if (!state.settings.gasUrl) {
         el.textContent = '未設定'; el.className = 'status-pill';
-      } else if (state.queue.length > 0) {
-        el.textContent = `未同期 ${state.queue.length}件`; el.className = 'status-pill pending';
+      } else if (state.queue.length > 0 || state.autoRulesDirty) {
+        const cnt = state.queue.length + (state.autoRulesDirty ? 1 : 0);
+        el.textContent = `未同期 ${cnt}件`; el.className = 'status-pill pending';
       } else {
         el.textContent = '同期済'; el.className = 'status-pill ok';
       }
@@ -957,6 +1276,7 @@
       renderInputControls();
       renderRecentList();
       renderCategoryManager();
+      renderAutoRuleSettings();
       renderShortcutUrlSelect();
     }
 
