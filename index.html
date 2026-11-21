@@ -11,6 +11,12 @@
     :root {
       --primary: #1a73e8;
       --primary-bg: #e8f0fe;
+      --l1: #1a73e8;
+      --l1-bg: #eff6ff;
+      --l2: #0d9488;
+      --l2-bg: #f0fdfa;
+      --l3: #4f46e5;
+      --l3-bg: #eef2ff;
       --bg: #f4f6f9;
       --card: #ffffff;
       --text: #1f2937;
@@ -51,7 +57,7 @@
       margin: 0 0 8px; letter-spacing: 0.03em;
     }
 
-    /* ショートカット＆連動チップ */
+    /* ショートカット */
     .shortcut-grid {
       display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 8px;
     }
@@ -63,14 +69,51 @@
     .shortcut-btn.selected {
       border-color: var(--primary); background: var(--primary-bg); color: var(--primary);
     }
-    .chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+
+    /* 選択中パス */
+    .selected-path {
+      display: flex; align-items: center; flex-wrap: wrap; gap: 4px;
+      background: #f8fafc; border: 1px solid var(--border); border-radius: 10px;
+      padding: 8px 10px; margin-bottom: 10px; font-size: 12px; font-weight: 700;
+    }
+    .path-tag { padding: 2px 7px; border-radius: 6px; }
+    .path-tag.l1 { background: var(--l1-bg); color: var(--l1); }
+    .path-tag.l2 { background: var(--l2-bg); color: var(--l2); }
+    .path-tag.l3 { background: var(--l3-bg); color: var(--l3); }
+    .path-sep { color: #9ca3af; font-weight: 400; }
+
+    /* 階層別ボックス */
+    .cat-group {
+      border-radius: 10px; padding: 8px 10px 4px; margin-bottom: 8px;
+      border: 1px solid var(--border); border-left-width: 4px;
+    }
+    .cat-group.l1 { background: var(--l1-bg); border-left-color: var(--l1); }
+    .cat-group.l2 { background: var(--l2-bg); border-left-color: var(--l2); }
+    .cat-group.l3 { background: var(--l3-bg); border-left-color: var(--l3); margin-bottom: 12px; }
+    .cat-group-label {
+      font-size: 11px; font-weight: 800; margin-bottom: 6px;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .cat-group.l1 .cat-group-label { color: var(--l1); }
+    .cat-group.l2 .cat-group-label { color: var(--l2); }
+    .cat-group.l3 .cat-group-label { color: var(--l3); }
+    .step-num {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 16px; height: 16px; border-radius: 50%; font-size: 10px; color: #fff;
+    }
+    .cat-group.l1 .step-num { background: var(--l1); }
+    .cat-group.l2 .step-num { background: var(--l2); }
+    .cat-group.l3 .step-num { background: var(--l3); }
+
+    .chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
     .chip {
-      border: 1px solid var(--border); background: #fff; border-radius: 999px;
-      padding: 7px 13px; font-size: 13px; cursor: pointer; color: var(--text);
+      border: 1px solid #d1d5db; background: #fff; border-radius: 999px;
+      padding: 6px 12px; font-size: 13px; cursor: pointer; color: var(--text);
+      transition: 0.1s;
     }
-    .chip.selected {
-      background: var(--primary); border-color: var(--primary); color: #fff; font-weight: 600;
-    }
+    .cat-group.l1 .chip.selected { background: var(--l1); border-color: var(--l1); color: #fff; font-weight: 700; }
+    .cat-group.l2 .chip.selected { background: var(--l2); border-color: var(--l2); color: #fff; font-weight: 700; }
+    .cat-group.l3 .chip.selected { background: var(--l3); border-color: var(--l3); color: #fff; font-weight: 700; }
 
     /* フォーム */
     .field { margin-bottom: 12px; }
@@ -154,16 +197,28 @@
   <main>
     <!-- ========== 1. 入力タブ ========== -->
     <section id="view-input" class="view active">
-      <div class="card">
+      <div class="card" id="shortcutCard">
         <p class="section-title">⚡ ショートカット（1タップ選択）</p>
         <div id="shortcutGrid" class="shortcut-grid"></div>
       </div>
 
       <div class="card">
-        <p class="section-title">📂 分類（大 → 中 → 小 連動）</p>
-        <div id="cat1Chips" class="chip-row"></div>
-        <div id="cat2Chips" class="chip-row"></div>
-        <div id="cat3Chips" class="chip-row"></div>
+        <div id="selectedPath" class="selected-path"></div>
+
+        <div class="cat-group l1">
+          <div class="cat-group-label"><span class="step-num">1</span> 大分類</div>
+          <div id="cat1Chips" class="chip-row"></div>
+        </div>
+
+        <div class="cat-group l2">
+          <div class="cat-group-label"><span class="step-num">2</span> 中分類</div>
+          <div id="cat2Chips" class="chip-row"></div>
+        </div>
+
+        <div class="cat-group l3">
+          <div class="cat-group-label"><span class="step-num">3</span> 小分類</div>
+          <div id="cat3Chips" class="chip-row"></div>
+        </div>
 
         <div class="row-2">
           <div class="field">
@@ -230,11 +285,11 @@
         <p class="section-title" id="catFormTitle">➕ 分類を追加 / 編集</p>
         <input type="hidden" id="editCatId" />
         <div class="row-2">
-          <div class="field"><label>大分類 *</label><input id="fCat1" type="text" placeholder="例: 支出・食事" /></div>
+          <div class="field"><label>大分類 *</label><input id="fCat1" type="text" placeholder="例: 食事" /></div>
           <div class="field"><label>中分類 *</label><input id="fCat2" type="text" placeholder="例: 昼食" /></div>
         </div>
         <div class="row-2">
-          <div class="field"><label>小分類 *</label><input id="fCat3" type="text" placeholder="例: ラーメン" /></div>
+          <div class="field"><label>小分類 *</label><input id="fCat3" type="text" placeholder="例: 外食" /></div>
           <div class="field"><label>ショートカット名（任意）</label><input id="fShortcut" type="text" placeholder="例: 🍜 ラーメン" /></div>
         </div>
         <div class="row-2">
@@ -325,12 +380,11 @@
       charts: { spend: null, cal: null, pie: null }
     };
 
-    // デフォルト分類（初回未同期時でも画面確認できるように用意）
     if (!state.categories.length) {
       state.categories = [
-        { category_id:'C001', cat1:'支出・食事', cat2:'カフェ', cat3:'コーヒー', is_food:true, active:true, shortcut_label:'☕ コーヒー', fixed_kcal:5, default_amount:420, sort_order:10 },
-        { category_id:'C002', cat1:'支出・食事', cat2:'昼食', cat3:'ラーメン', is_food:true, active:true, shortcut_label:'🍜 ラーメン', fixed_kcal:null, default_amount:null, sort_order:20 },
-        { category_id:'C009', cat1:'気持ち', cat2:'メモ・内省', cat3:'ひとこと', is_food:false, active:true, shortcut_label:'💭 ひとこと', fixed_kcal:null, default_amount:null, sort_order:90 }
+        { category_id:'C001', cat1:'食事', cat2:'朝食', cat3:'自宅・自炊', is_food:true, active:true, shortcut_label:'', fixed_kcal:null, default_amount:null, sort_order:10 },
+        { category_id:'C004', cat1:'食事', cat2:'昼食', cat3:'外食', is_food:true, active:true, shortcut_label:'', fixed_kcal:null, default_amount:null, sort_order:40 },
+        { category_id:'C029', cat1:'気持ち', cat2:'仕事', cat3:'ポジティブ', is_food:false, active:true, shortcut_label:'', fixed_kcal:null, default_amount:null, sort_order:290 }
       ];
     }
 
@@ -340,7 +394,6 @@
         navigator.serviceWorker.register('./sw.js').catch(() => {});
       }
 
-      // ナビ切り替え
       document.querySelectorAll('.bottom-nav button').forEach(btn => {
         btn.addEventListener('click', () => switchView(btn.dataset.view));
       });
@@ -353,12 +406,10 @@
         });
       });
 
-      // 設定フォーム初期値
       document.getElementById('setGasUrl').value = state.settings.gasUrl || '';
       document.getElementById('setToken').value = state.settings.token || '';
       document.getElementById('setTargetCal').value = state.settings.targetCal || 2000;
 
-      // URLパラメータ（?cat=C001）でのダイレクト起動に対応
       const params = new URLSearchParams(location.search);
       const urlCat = params.get('cat');
       if (urlCat) {
@@ -407,24 +458,27 @@
       state.selCat2 = cat.cat2;
       state.selCatId = cat.category_id;
 
-      // ショートカット既定値の反映
-      const amtEl = document.getElementById('inpAmount');
-      const calEl = document.getElementById('inpCal');
-      amtEl.value = cat.default_amount ?? '';
-      calEl.value = cat.fixed_kcal ?? '';
+      document.getElementById('inpAmount').value = cat.default_amount ?? '';
+      document.getElementById('inpCal').value = cat.fixed_kcal ?? '';
       renderInputControls();
     }
 
     function renderInputControls() {
       const cats = activeCategories();
 
-      // ショートカット描画
+      // ショートカット描画（0件のときはカードごと自動非表示）
+      const scCard = document.getElementById('shortcutCard');
       const scEl = document.getElementById('shortcutGrid');
       const shortcuts = cats.filter(c => c.shortcut_label);
-      scEl.innerHTML = shortcuts.map(c => `
-        <button class="shortcut-btn ${c.category_id === state.selCatId ? 'selected' : ''}"
-                onclick="selectByCategoryId('${c.category_id}')">${esc(c.shortcut_label)}</button>
-      `).join('');
+      if (!shortcuts.length) {
+        scCard.style.display = 'none';
+      } else {
+        scCard.style.display = 'block';
+        scEl.innerHTML = shortcuts.map(c => `
+          <button class="shortcut-btn ${c.category_id === state.selCatId ? 'selected' : ''}"
+                  onclick="selectByCategoryId('${c.category_id}')">${esc(c.shortcut_label)}</button>
+        `).join('');
+      }
 
       // 大分類
       const cat1List = [...new Set(cats.map(c => c.cat1))];
@@ -449,8 +503,23 @@
         <button class="chip ${c.category_id === state.selCatId ? 'selected' : ''}" onclick="selectByCategoryId('${c.category_id}')">${esc(c.cat3)}</button>
       `).join('');
 
-      // カロリー入力欄の表示切替
+      // 選択中パスとカロリー入力欄の更新
       const curCat = cats.find(c => c.category_id === state.selCatId);
+      const pathEl = document.getElementById('selectedPath');
+      if (curCat) {
+        pathEl.innerHTML = `
+          <span style="color:var(--muted);font-weight:600;margin-right:2px;">選択中:</span>
+          <span class="path-tag l1">${esc(curCat.cat1)}</span>
+          <span class="path-sep">›</span>
+          <span class="path-tag l2">${esc(curCat.cat2)}</span>
+          <span class="path-sep">›</span>
+          <span class="path-tag l3">${esc(curCat.cat3)}</span>
+          ${curCat.is_food ? '<span style="margin-left:auto;font-size:11px;color:var(--warn);">🍽️ AIカロリー対象</span>' : ''}
+        `;
+      } else {
+        pathEl.textContent = '分類を選択してください';
+      }
+
       document.getElementById('calFieldWrap').style.opacity = curCat?.is_food ? '1' : '0.4';
       document.getElementById('inpCal').placeholder = curCat?.is_food ? '空欄ならAI自動計算' : '対象外（手入力可）';
     }
@@ -503,12 +572,10 @@
         _unsynced: true
       };
 
-      // ローカル即時反映（待ち時間ゼロ）
       state.queue.push(rec);
       state.records.push(rec);
       persistLocal();
 
-      // 入力リセット
       document.getElementById('inpAmount').value = cat.default_amount ?? '';
       document.getElementById('inpCal').value = cat.fixed_kcal ?? '';
       document.getElementById('inpMemo').value = '';
@@ -516,8 +583,6 @@
       renderRecentList();
       updateSyncBadge();
       toast('記録しました');
-
-      // バックグラウンド送信
       flushQueue();
     }
 
@@ -530,7 +595,7 @@
       }
       listEl.innerHTML = items.map(r => {
         const badges = [];
-        badges.push(`<span class="badge">${esc(r.cat1)} / ${esc(r.cat3)}</span>`);
+        badges.push(`<span class="badge">${esc(r.cat1)} › ${esc(r.cat2)} › ${esc(r.cat3)}</span>`);
         if (r._unsynced) badges.push('<span class="badge badge-off">未同期</span>');
         if (r.cal_status === 'PENDING') badges.push('<span class="badge badge-ai">AI計算待ち</span>');
         const rightAmt = r.amount != null ? `¥${r.amount.toLocaleString()}` : '';
@@ -551,17 +616,14 @@
       }).join('');
     }
 
-    // ====== 2. 6期間グラフ分析（日次・週次・月次・3ヶ月・半年・年間） ======
+    // ====== 2. 6期間グラフ分析 ======
     function renderCharts() {
       const p = state.period;
       const now = new Date();
       const buckets = buildBuckets(p, now);
       const startKey = buckets[0].startDate;
-
-      // 期間内のレコード抽出
       const inRange = state.records.filter(r => r.date >= startKey);
 
-      // バケットごとに集計（カロリーは日別合計を作ってからバケット内1日平均を出す）
       const bucketMap = new Map();
       buckets.forEach(b => bucketMap.set(b.key, { ...b, spend: 0, dayCalMap: new Map() }));
 
@@ -592,7 +654,6 @@
         return p === 'daily' ? Math.round(sum) : Math.round(sum / b.dayCalMap.size);
       });
 
-      // KPI更新
       const periodDays = Math.max(1, Math.round((now - new Date(startKey)) / 86400000) + 1);
       const calDays = allDayCal.size;
       const calSum = [...allDayCal.values()].reduce((a, v) => a + v, 0);
@@ -604,7 +665,6 @@
       document.getElementById('calChartTitle').textContent =
         p === 'daily' ? '🔥 摂取カロリー（日合計・赤線＝目標）' : '🔥 摂取カロリー（1日平均・赤線＝目標）';
 
-      // 支出棒グラフ
       drawChart('spend', 'spendChart', {
         type: 'bar',
         data: {
@@ -614,7 +674,6 @@
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
       });
 
-      // カロリー推移＋目標ライン
       const targetCal = Number(state.settings.targetCal || 2000);
       drawChart('cal', 'calChart', {
         type: 'bar',
@@ -628,7 +687,6 @@
         options: { responsive: true, maintainAspectRatio: false }
       });
 
-      // 大分類別ドーナツ
       const pieLabels = [...catSpendMap.keys()];
       const pieVals = [...catSpendMap.values()];
       drawChart('pie', 'catPieChart', {
@@ -666,7 +724,7 @@
           list.push({ key: s, label: s.slice(5).replace('-', '/') + '週', startDate: s });
         }
       } else {
-        const months = period === '6m' ? 6 : 12; // monthly / yearly は12ヶ月表示
+        const months = period === '6m' ? 6 : 12;
         for (let i = months - 1; i >= 0; i--) {
           const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
           const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -693,7 +751,7 @@
       return d;
     }
 
-    // ====== 3. 分類管理（追加・変更・論理削除） ======
+    // ====== 3. 分類管理 ======
     function renderCategoryManager() {
       const el = document.getElementById('catManageList');
       const cats = activeCategories();
@@ -835,7 +893,7 @@
         renderRecentList();
         updateSyncBadge();
       } catch (_) {
-        updateSyncBadge(); // オフラインまたは一時エラー時はキューに残す
+        updateSyncBadge();
       }
     }
 
@@ -853,7 +911,6 @@
         if (!data.ok) throw new Error(data.error);
 
         state.categories = data.categories;
-        // サーバーの最新データ ＋ まだローカルに残る未送信キューをマージ
         const serverIds = new Set(data.records.map(r => r.record_id));
         const pendingLocal = state.queue.filter(r => !serverIds.has(r.record_id));
         state.records = [...data.records, ...pendingLocal];
