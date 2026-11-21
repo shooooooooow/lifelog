@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#1a73e8" />
+  <link rel="manifest" href="./manifest.json" />
+  <title>マイライフログ</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --primary: #1a73e8;
+      --primary-bg: #e8f0fe;
+      --bg: #f4f6f9;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --danger: #dc2626;
+      --success: #059669;
+      --warn: #d97706;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+      background: var(--bg); color: var(--text); padding-bottom: 76px;
+    }
+    header {
+      position: sticky; top: 0; z-index: 20; background: var(--card);
+      border-bottom: 1px solid var(--border); padding: 12px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    header h1 { margin: 0; font-size: 17px; font-weight: 700; }
+    .status-pill {
+      font-size: 12px; padding: 4px 10px; border-radius: 999px;
+      background: var(--bg); color: var(--muted); cursor: pointer;
+    }
+    .status-pill.pending { background: #fef3c7; color: var(--warn); font-weight: 600; }
+    .status-pill.ok { background: #d1fae5; color: var(--success); }
+
+    main { max-width: 760px; margin: 0 auto; padding: 14px; }
+    .view { display: none; }
+    .view.active { display: block; }
+
+    .card {
+      background: var(--card); border-radius: 14px; padding: 14px;
+      margin-bottom: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .section-title {
+      font-size: 12px; font-weight: 700; color: var(--muted);
+      margin: 0 0 8px; letter-spacing: 0.03em;
+    }
+
+    /* ショートカット＆連動チップ */
+    .shortcut-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 8px;
+    }
+    .shortcut-btn {
+      border: 1.5px solid var(--border); background: #fff; border-radius: 10px;
+      padding: 10px 8px; font-size: 13px; font-weight: 600; color: var(--text);
+      cursor: pointer; text-align: center; transition: 0.12s;
+    }
+    .shortcut-btn.selected {
+      border-color: var(--primary); background: var(--primary-bg); color: var(--primary);
+    }
+    .chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .chip {
+      border: 1px solid var(--border); background: #fff; border-radius: 999px;
+      padding: 7px 13px; font-size: 13px; cursor: pointer; color: var(--text);
+    }
+    .chip.selected {
+      background: var(--primary); border-color: var(--primary); color: #fff; font-weight: 600;
+    }
+
+    /* フォーム */
+    .field { margin-bottom: 12px; }
+    .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; font-weight: 600; }
+    input[type="text"], input[type="number"], input[type="url"], input[type="password"], textarea, select {
+      width: 100%; padding: 11px 12px; font-size: 16px; border: 1.5px solid var(--border);
+      border-radius: 10px; background: #fff; color: var(--text); outline: none;
+    }
+    input:focus, textarea:focus { border-color: var(--primary); }
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .btn {
+      width: 100%; border: none; border-radius: 12px; padding: 13px;
+      font-size: 15px; font-weight: 700; cursor: pointer; transition: 0.15s;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:active { opacity: 0.85; transform: scale(0.99); }
+    .btn-sub { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+    .btn-sm { width: auto; padding: 6px 12px; font-size: 12px; border-radius: 8px; }
+    .btn-danger { background: #fee2e2; color: var(--danger); }
+
+    /* グラフ・KPI */
+    .period-tabs {
+      display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; margin-bottom: 12px;
+    }
+    .period-tab {
+      border: 1px solid var(--border); background: #fff; border-radius: 8px;
+      padding: 8px 2px; font-size: 12px; font-weight: 600; cursor: pointer; color: var(--muted);
+    }
+    .period-tab.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 14px; }
+    .kpi { background: var(--card); border-radius: 12px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .kpi-label { font-size: 11px; color: var(--muted); }
+    .kpi-val { font-size: 20px; font-weight: 800; margin-top: 2px; }
+    .chart-box { position: relative; height: 240px; width: 100%; }
+    .chart-box-sm { position: relative; height: 210px; width: 100%; }
+
+    /* リスト */
+    .list-item {
+      display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;
+      padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px;
+    }
+    .list-item:last-child { border-bottom: none; }
+    .badge {
+      display: inline-block; font-size: 10px; padding: 2px 6px; border-radius: 6px;
+      background: var(--primary-bg); color: var(--primary); font-weight: 600; margin-right: 4px;
+    }
+    .badge-ai { background: #fef3c7; color: var(--warn); }
+    .badge-off { background: #e5e7eb; color: #4b5563; }
+
+    /* ボトムナビ */
+    nav.bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 30;
+      background: var(--card); border-top: 1px solid var(--border);
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    nav.bottom-nav button {
+      border: none; background: transparent; padding: 10px 4px;
+      font-size: 11px; color: var(--muted); cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+    }
+    nav.bottom-nav button span.ico { font-size: 19px; }
+    nav.bottom-nav button.active { color: var(--primary); font-weight: 700; }
+
+    .toast {
+      position: fixed; top: 64px; left: 50%; transform: translateX(-50%);
+      background: #111827; color: #fff; padding: 9px 16px; border-radius: 999px;
+      font-size: 13px; z-index: 50; opacity: 0; pointer-events: none; transition: 0.2s;
+    }
+    .toast.show { opacity: 0.95; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>マイライフログ</h1>
+    <div id="syncStatus" class="status-pill" onclick="syncAll(true)">未設定</div>
+  </header>
+
+  <div id="toast" class="toast"></div>
+
+  <main>
+    <!-- ========== 1. 入力タブ ========== -->
+    <section id="view-input" class="view active">
+      <div class="card">
+        <p class="section-title">⚡ ショートカット（1タップ選択）</p>
+        <div id="shortcutGrid" class="shortcut-grid"></div>
+      </div>
+
+      <div class="card">
+        <p class="section-title">📂 分類（大 → 中 → 小 連動）</p>
+        <div id="cat1Chips" class="chip-row"></div>
+        <div id="cat2Chips" class="chip-row"></div>
+        <div id="cat3Chips" class="chip-row"></div>
+
+        <div class="row-2">
+          <div class="field">
+            <label for="inpAmount">金額（円）</label>
+            <input id="inpAmount" type="number" inputmode="numeric" placeholder="例: 950" />
+          </div>
+          <div class="field" id="calFieldWrap">
+            <label for="inpCal">カロリー（kcal）</label>
+            <input id="inpCal" type="number" inputmode="numeric" placeholder="空欄ならAI自動計算" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="inpMemo">内容メモ（食べ物・気持ちなど）</label>
+          <textarea id="inpMemo" rows="2" placeholder="例: 豚骨ラーメン 麺少なめ / 会議がスムーズに終わった"></textarea>
+        </div>
+
+        <button class="btn btn-primary" onclick="submitRecord()">記録する</button>
+      </div>
+
+      <div class="card">
+        <p class="section-title">🕒 最近の記録（直近10件）</p>
+        <div id="recentList"></div>
+      </div>
+    </section>
+
+    <!-- ========== 2. グラフ分析タブ ========== -->
+    <section id="view-charts" class="view">
+      <div class="period-tabs" id="periodTabs">
+        <button class="period-tab active" data-period="daily">日次</button>
+        <button class="period-tab" data-period="weekly">週次</button>
+        <button class="period-tab" data-period="monthly">月次</button>
+        <button class="period-tab" data-period="3m">3ヶ月</button>
+        <button class="period-tab" data-period="6m">半年</button>
+        <button class="period-tab" data-period="yearly">年間</button>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi"><div class="kpi-label">期間支出合計</div><div id="kpiSpendSum" class="kpi-val">¥0</div></div>
+        <div class="kpi"><div class="kpi-label">1日平均支出</div><div id="kpiSpendAvg" class="kpi-val">¥0</div></div>
+        <div class="kpi"><div class="kpi-label">1日平均カロリー</div><div id="kpiCalAvg" class="kpi-val">0 kcal</div></div>
+        <div class="kpi"><div class="kpi-label">記録件数</div><div id="kpiCount" class="kpi-val">0 件</div></div>
+      </div>
+
+      <div class="card">
+        <p class="section-title" id="spendChartTitle">💴 使ったお金の推移</p>
+        <div class="chart-box"><canvas id="spendChart"></canvas></div>
+      </div>
+
+      <div class="card">
+        <p class="section-title" id="calChartTitle">🔥 摂取カロリーの推移（赤線＝目標）</p>
+        <div class="chart-box"><canvas id="calChart"></canvas></div>
+      </div>
+
+      <div class="card">
+        <p class="section-title">🍩 大分類別の支出構成</p>
+        <div class="chart-box-sm"><canvas id="catPieChart"></canvas></div>
+      </div>
+    </section>
+
+    <!-- ========== 3. 分類管理タブ ========== -->
+    <section id="view-categories" class="view">
+      <div class="card">
+        <p class="section-title" id="catFormTitle">➕ 分類を追加 / 編集</p>
+        <input type="hidden" id="editCatId" />
+        <div class="row-2">
+          <div class="field"><label>大分類 *</label><input id="fCat1" type="text" placeholder="例: 支出・食事" /></div>
+          <div class="field"><label>中分類 *</label><input id="fCat2" type="text" placeholder="例: 昼食" /></div>
+        </div>
+        <div class="row-2">
+          <div class="field"><label>小分類 *</label><input id="fCat3" type="text" placeholder="例: ラーメン" /></div>
+          <div class="field"><label>ショートカット名（任意）</label><input id="fShortcut" type="text" placeholder="例: 🍜 ラーメン" /></div>
+        </div>
+        <div class="row-2">
+          <div class="field"><label>固定カロリー（任意）</label><input id="fFixedKcal" type="number" placeholder="空欄ならAI計算" /></div>
+          <div class="field"><label>既定金額（任意）</label><input id="fDefAmt" type="number" placeholder="例: 420" /></div>
+        </div>
+        <div class="row-2" style="align-items:center; margin-bottom:12px;">
+          <label style="font-size:13px; display:flex; align-items:center; gap:6px;">
+            <input id="fIsFood" type="checkbox" style="width:auto;" /> カロリー計算の対象にする
+          </label>
+          <div class="field" style="margin:0;"><label>表示順</label><input id="fSort" type="number" value="100" /></div>
+        </div>
+        <div class="row-2">
+          <button class="btn btn-primary" onclick="saveCategoryForm()">保存する</button>
+          <button class="btn btn-sub" onclick="resetCategoryForm()">クリア</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="section-title">📋 登録済みの分類一覧（削除しても過去グラフは保持）</p>
+        <div id="catManageList"></div>
+      </div>
+    </section>
+
+    <!-- ========== 4. 設定タブ ========== -->
+    <section id="view-settings" class="view">
+      <div class="card">
+        <p class="section-title">⚙️ GAS 接続設定（端末ローカル保存）</p>
+        <div class="field">
+          <label>GAS Webアプリ URL</label>
+          <input id="setGasUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec" />
+        </div>
+        <div class="field">
+          <label>APIトークン（GASスクリプトプロパティの API_TOKEN）</label>
+          <input id="setToken" type="password" placeholder="自分で設定した合言葉" />
+        </div>
+        <div class="field">
+          <label>1日の目標カロリー（グラフ基準線）</label>
+          <input id="setTargetCal" type="number" value="2000" />
+        </div>
+        <button class="btn btn-primary" onclick="saveSettings()">設定を保存して同期</button>
+      </div>
+
+      <div class="card">
+        <p class="section-title">🔗 ホーム画面ダイレクトショートカットURL生成</p>
+        <p style="font-size:12px; color:var(--muted); margin-top:0;">
+          選んだ分類が最初から選択された状態で開くURLをコピーできます。スマホのホーム画面に追加すると1タップで起動できます。
+        </p>
+        <div class="field">
+          <select id="shortcutUrlSelect"></select>
+        </div>
+        <button class="btn btn-sub" onclick="copyShortcutUrl()">ショートカットURLをコピー</button>
+      </div>
+
+      <div class="card">
+        <p class="section-title">🛠 メンテナンス</p>
+        <div class="row-2">
+          <button class="btn btn-sub" onclick="syncAll(true)">今すぐ最新同期</button>
+          <button class="btn btn-sub" onclick="triggerAiNow()">AIカロリー即時計算</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav">
+    <button class="active" data-view="input"><span class="ico">✏️</span>入力</button>
+    <button data-view="charts"><span class="ico">📊</span>グラフ</button>
+    <button data-view="categories"><span class="ico">🏷️</span>分類管理</button>
+    <button data-view="settings"><span class="ico">⚙️</span>設定</button>
+  </nav>
+
+  <script>
+    // ====== 状態管理 ======
+    const KEYS = {
+      settings: 'll_settings_v1',
+      categories: 'll_categories_v1',
+      records: 'll_records_v1',
+      queue: 'll_queue_v1'
+    };
+
+    const state = {
+      settings: JSON.parse(localStorage.getItem(KEYS.settings) || '{"gasUrl":"","token":"","targetCal":2000}'),
+      categories: JSON.parse(localStorage.getItem(KEYS.categories) || '[]'),
+      records: JSON.parse(localStorage.getItem(KEYS.records) || '[]'),
+      queue: JSON.parse(localStorage.getItem(KEYS.queue) || '[]'),
+      selCat1: '', selCat2: '', selCatId: '',
+      period: 'daily',
+      charts: { spend: null, cal: null, pie: null }
+    };
+
+    // デフォルト分類（初回未同期時でも画面確認できるように用意）
+    if (!state.categories.length) {
+      state.categories = [
+        { category_id:'C001', cat1:'支出・食事', cat2:'カフェ', cat3:'コーヒー', is_food:true, active:true, shortcut_label:'☕ コーヒー', fixed_kcal:5, default_amount:420, sort_order:10 },
+        { category_id:'C002', cat1:'支出・食事', cat2:'昼食', cat3:'ラーメン', is_food:true, active:true, shortcut_label:'🍜 ラーメン', fixed_kcal:null, default_amount:null, sort_order:20 },
+        { category_id:'C009', cat1:'気持ち', cat2:'メモ・内省', cat3:'ひとこと', is_food:false, active:true, shortcut_label:'💭 ひとこと', fixed_kcal:null, default_amount:null, sort_order:90 }
+      ];
+    }
+
+    // ====== 初期化 ======
+    window.addEventListener('DOMContentLoaded', () => {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      }
+
+      // ナビ切り替え
+      document.querySelectorAll('.bottom-nav button').forEach(btn => {
+        btn.addEventListener('click', () => switchView(btn.dataset.view));
+      });
+      document.querySelectorAll('.period-tab').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.period-tab').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          state.period = btn.dataset.period;
+          renderCharts();
+        });
+      });
+
+      // 設定フォーム初期値
+      document.getElementById('setGasUrl').value = state.settings.gasUrl || '';
+      document.getElementById('setToken').value = state.settings.token || '';
+      document.getElementById('setTargetCal').value = state.settings.targetCal || 2000;
+
+      // URLパラメータ（?cat=C001）でのダイレクト起動に対応
+      const params = new URLSearchParams(location.search);
+      const urlCat = params.get('cat');
+      if (urlCat) {
+        selectByCategoryId(urlCat);
+      } else {
+        const firstActive = activeCategories()[0];
+        if (firstActive) selectByCategoryId(firstActive.category_id);
+      }
+
+      renderAll();
+      updateSyncBadge();
+
+      if (state.settings.gasUrl && state.settings.token) {
+        syncAll(false);
+      }
+      window.addEventListener('online', () => syncAll(false));
+    });
+
+    function switchView(name) {
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.getElementById('view-' + name).classList.add('active');
+      document.querySelectorAll('.bottom-nav button').forEach(b => {
+        b.classList.toggle('active', b.dataset.view === name);
+      });
+      if (name === 'charts') renderCharts();
+      if (name === 'categories') renderCategoryManager();
+      if (name === 'settings') renderShortcutUrlSelect();
+    }
+
+    function activeCategories() {
+      return state.categories.filter(c => c.active).sort((a, b) => a.sort_order - b.sort_order);
+    }
+
+    function toast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      setTimeout(() => el.classList.remove('show'), 2200);
+    }
+
+    // ====== 1. 入力・ショートカット・3階層連動 ======
+    function selectByCategoryId(catId) {
+      const cat = state.categories.find(c => c.category_id === catId);
+      if (!cat) return;
+      state.selCat1 = cat.cat1;
+      state.selCat2 = cat.cat2;
+      state.selCatId = cat.category_id;
+
+      // ショートカット既定値の反映
+      const amtEl = document.getElementById('inpAmount');
+      const calEl = document.getElementById('inpCal');
+      amtEl.value = cat.default_amount ?? '';
+      calEl.value = cat.fixed_kcal ?? '';
+      renderInputControls();
+    }
+
+    function renderInputControls() {
+      const cats = activeCategories();
+
+      // ショートカット描画
+      const scEl = document.getElementById('shortcutGrid');
+      const shortcuts = cats.filter(c => c.shortcut_label);
+      scEl.innerHTML = shortcuts.map(c => `
+        <button class="shortcut-btn ${c.category_id === state.selCatId ? 'selected' : ''}"
+                onclick="selectByCategoryId('${c.category_id}')">${esc(c.shortcut_label)}</button>
+      `).join('');
+
+      // 大分類
+      const cat1List = [...new Set(cats.map(c => c.cat1))];
+      if (!cat1List.includes(state.selCat1)) state.selCat1 = cat1List[0] || '';
+      document.getElementById('cat1Chips').innerHTML = cat1List.map(c1 => `
+        <button class="chip ${c1 === state.selCat1 ? 'selected' : ''}" onclick="onSelectCat1('${escAttr(c1)}')">${esc(c1)}</button>
+      `).join('');
+
+      // 中分類（大分類で絞り込み）
+      const cat2List = [...new Set(cats.filter(c => c.cat1 === state.selCat1).map(c => c.cat2))];
+      if (!cat2List.includes(state.selCat2)) state.selCat2 = cat2List[0] || '';
+      document.getElementById('cat2Chips').innerHTML = cat2List.map(c2 => `
+        <button class="chip ${c2 === state.selCat2 ? 'selected' : ''}" onclick="onSelectCat2('${escAttr(c2)}')">${esc(c2)}</button>
+      `).join('');
+
+      // 小分類（大＋中で絞り込み）
+      const cat3List = cats.filter(c => c.cat1 === state.selCat1 && c.cat2 === state.selCat2);
+      if (!cat3List.some(c => c.category_id === state.selCatId)) {
+        state.selCatId = cat3List[0]?.category_id || '';
+      }
+      document.getElementById('cat3Chips').innerHTML = cat3List.map(c => `
+        <button class="chip ${c.category_id === state.selCatId ? 'selected' : ''}" onclick="selectByCategoryId('${c.category_id}')">${esc(c.cat3)}</button>
+      `).join('');
+
+      // カロリー入力欄の表示切替
+      const curCat = cats.find(c => c.category_id === state.selCatId);
+      document.getElementById('calFieldWrap').style.opacity = curCat?.is_food ? '1' : '0.4';
+      document.getElementById('inpCal').placeholder = curCat?.is_food ? '空欄ならAI自動計算' : '対象外（手入力可）';
+    }
+
+    function onSelectCat1(c1) {
+      state.selCat1 = c1;
+      const cats = activeCategories().filter(c => c.cat1 === c1);
+      state.selCat2 = cats[0]?.cat2 || '';
+      const c3 = cats.find(c => c.cat2 === state.selCat2);
+      if (c3) selectByCategoryId(c3.category_id);
+      else renderInputControls();
+    }
+
+    function onSelectCat2(c2) {
+      state.selCat2 = c2;
+      const c3 = activeCategories().find(c => c.cat1 === state.selCat1 && c.cat2 === c2);
+      if (c3) selectByCategoryId(c3.category_id);
+      else renderInputControls();
+    }
+
+    function submitRecord() {
+      const cat = state.categories.find(c => c.category_id === state.selCatId);
+      if (!cat) return toast('分類を選択してください');
+
+      const amtRaw = document.getElementById('inpAmount').value.trim();
+      const calRaw = document.getElementById('inpCal').value.trim();
+      const memo = document.getElementById('inpMemo').value.trim();
+
+      if (!amtRaw && !memo && !calRaw && !cat.fixed_kcal) {
+        return toast('金額またはメモを入力してください');
+      }
+
+      const now = new Date();
+      const dateStr = formatDateJst(now);
+      const isMobile = /iPhone|Android/i.test(navigator.userAgent);
+      const calories = calRaw !== '' ? Number(calRaw) : (cat.is_food && cat.fixed_kcal != null ? cat.fixed_kcal : null);
+
+      const rec = {
+        record_id: crypto.randomUUID ? crypto.randomUUID() : ('r_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7)),
+        timestamp: now.toISOString(),
+        date: dateStr,
+        category_id: cat.category_id,
+        cat1: cat.cat1, cat2: cat.cat2, cat3: cat.cat3,
+        amount: amtRaw !== '' ? Number(amtRaw) : null,
+        memo,
+        calories,
+        cal_status: (cat.is_food && calories === null && memo) ? 'PENDING' : (calories !== null ? 'FIXED' : 'NONE'),
+        cal_note: '',
+        device: isMobile ? 'mobile' : 'pc',
+        _unsynced: true
+      };
+
+      // ローカル即時反映（待ち時間ゼロ）
+      state.queue.push(rec);
+      state.records.push(rec);
+      persistLocal();
+
+      // 入力リセット
+      document.getElementById('inpAmount').value = cat.default_amount ?? '';
+      document.getElementById('inpCal').value = cat.fixed_kcal ?? '';
+      document.getElementById('inpMemo').value = '';
+
+      renderRecentList();
+      updateSyncBadge();
+      toast('記録しました');
+
+      // バックグラウンド送信
+      flushQueue();
+    }
+
+    function renderRecentList() {
+      const listEl = document.getElementById('recentList');
+      const items = [...state.records].slice(-10).reverse();
+      if (!items.length) {
+        listEl.innerHTML = '<div style="color:var(--muted);font-size:13px;">まだ記録がありません</div>';
+        return;
+      }
+      listEl.innerHTML = items.map(r => {
+        const badges = [];
+        badges.push(`<span class="badge">${esc(r.cat1)} / ${esc(r.cat3)}</span>`);
+        if (r._unsynced) badges.push('<span class="badge badge-off">未同期</span>');
+        if (r.cal_status === 'PENDING') badges.push('<span class="badge badge-ai">AI計算待ち</span>');
+        const rightAmt = r.amount != null ? `¥${r.amount.toLocaleString()}` : '';
+        const rightCal = r.calories != null ? `${r.calories} kcal` : '';
+        return `
+          <div class="list-item">
+            <div>
+              <div>${badges.join('')}</div>
+              <div style="margin-top:3px;">${esc(r.memo || '(メモなし)')}</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px;">${esc(r.date)} ${r.cal_note ? '・' + esc(r.cal_note) : ''}</div>
+            </div>
+            <div style="text-align:right;white-space:nowrap;font-weight:700;">
+              <div>${rightAmt}</div>
+              <div style="font-size:12px;color:var(--warn);">${rightCal}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ====== 2. 6期間グラフ分析（日次・週次・月次・3ヶ月・半年・年間） ======
+    function renderCharts() {
+      const p = state.period;
+      const now = new Date();
+      const buckets = buildBuckets(p, now);
+      const startKey = buckets[0].startDate;
+
+      // 期間内のレコード抽出
+      const inRange = state.records.filter(r => r.date >= startKey);
+
+      // バケットごとに集計（カロリーは日別合計を作ってからバケット内1日平均を出す）
+      const bucketMap = new Map();
+      buckets.forEach(b => bucketMap.set(b.key, { ...b, spend: 0, dayCalMap: new Map() }));
+
+      const catSpendMap = new Map();
+      let totalSpend = 0;
+      const allDayCal = new Map();
+
+      inRange.forEach(r => {
+        const bKey = getBucketKey(p, r.date);
+        const b = bucketMap.get(bKey);
+        if (r.amount) {
+          totalSpend += r.amount;
+          catSpendMap.set(r.cat1, (catSpendMap.get(r.cat1) || 0) + r.amount);
+          if (b) b.spend += r.amount;
+        }
+        if (r.calories != null) {
+          allDayCal.set(r.date, (allDayCal.get(r.date) || 0) + r.calories);
+          if (b) b.dayCalMap.set(r.date, (b.dayCalMap.get(r.date) || 0) + r.calories);
+        }
+      });
+
+      const arr = [...bucketMap.values()];
+      const labels = arr.map(b => b.label);
+      const spendData = arr.map(b => Math.round(b.spend));
+      const calData = arr.map(b => {
+        if (!b.dayCalMap.size) return 0;
+        const sum = [...b.dayCalMap.values()].reduce((a, v) => a + v, 0);
+        return p === 'daily' ? Math.round(sum) : Math.round(sum / b.dayCalMap.size);
+      });
+
+      // KPI更新
+      const periodDays = Math.max(1, Math.round((now - new Date(startKey)) / 86400000) + 1);
+      const calDays = allDayCal.size;
+      const calSum = [...allDayCal.values()].reduce((a, v) => a + v, 0);
+      document.getElementById('kpiSpendSum').textContent = '¥' + Math.round(totalSpend).toLocaleString();
+      document.getElementById('kpiSpendAvg').textContent = '¥' + Math.round(totalSpend / periodDays).toLocaleString();
+      document.getElementById('kpiCalAvg').textContent = (calDays ? Math.round(calSum / calDays).toLocaleString() : 0) + ' kcal';
+      document.getElementById('kpiCount').textContent = inRange.length + ' 件';
+
+      document.getElementById('calChartTitle').textContent =
+        p === 'daily' ? '🔥 摂取カロリー（日合計・赤線＝目標）' : '🔥 摂取カロリー（1日平均・赤線＝目標）';
+
+      // 支出棒グラフ
+      drawChart('spend', 'spendChart', {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{ label: '支出(円)', data: spendData, backgroundColor: '#1a73e8', borderRadius: 6 }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+      });
+
+      // カロリー推移＋目標ライン
+      const targetCal = Number(state.settings.targetCal || 2000);
+      drawChart('cal', 'calChart', {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: p === 'daily' ? '合計kcal' : '日平均kcal', data: calData, backgroundColor: '#f59e0b', borderRadius: 6, order: 2 },
+            { label: '目標', data: labels.map(() => targetCal), type: 'line', borderColor: '#dc2626', borderWidth: 2, borderDash: [5, 5], pointRadius: 0, order: 1 }
+          ]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+
+      // 大分類別ドーナツ
+      const pieLabels = [...catSpendMap.keys()];
+      const pieVals = [...catSpendMap.values()];
+      drawChart('pie', 'catPieChart', {
+        type: 'doughnut',
+        data: {
+          labels: pieLabels.length ? pieLabels : ['データなし'],
+          datasets: [{
+            data: pieVals.length ? pieVals : [1],
+            backgroundColor: ['#1a73e8', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#6b7280']
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+      });
+    }
+
+    function drawChart(key, canvasId, config) {
+      if (state.charts[key]) state.charts[key].destroy();
+      state.charts[key] = new Chart(document.getElementById(canvasId), config);
+    }
+
+    function buildBuckets(period, now) {
+      const list = [];
+      if (period === 'daily') {
+        for (let i = 13; i >= 0; i--) {
+          const d = new Date(now); d.setDate(d.getDate() - i);
+          const s = formatDateJst(d);
+          list.push({ key: s, label: s.slice(5).replace('-', '/'), startDate: s });
+        }
+      } else if (period === 'weekly' || period === '3m') {
+        const weeks = period === 'weekly' ? 8 : 13;
+        const mon = getMonday(now);
+        for (let i = weeks - 1; i >= 0; i--) {
+          const d = new Date(mon); d.setDate(d.getDate() - i * 7);
+          const s = formatDateJst(d);
+          list.push({ key: s, label: s.slice(5).replace('-', '/') + '週', startDate: s });
+        }
+      } else {
+        const months = period === '6m' ? 6 : 12; // monthly / yearly は12ヶ月表示
+        for (let i = months - 1; i >= 0; i--) {
+          const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+          const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+          list.push({ key: ym, label: `${d.getMonth() + 1}月`, startDate: ym + '-01' });
+        }
+      }
+      return list;
+    }
+
+    function getBucketKey(period, dateStr) {
+      if (period === 'daily') return dateStr;
+      if (period === 'weekly' || period === '3m') {
+        const [y, m, d] = dateStr.split('-').map(Number);
+        return formatDateJst(getMonday(new Date(y, m - 1, d)));
+      }
+      return dateStr.slice(0, 7);
+    }
+
+    function getMonday(date) {
+      const d = new Date(date);
+      const day = d.getDay();
+      const diff = day === 0 ? -6 : 1 - day;
+      d.setDate(d.getDate() + diff);
+      return d;
+    }
+
+    // ====== 3. 分類管理（追加・変更・論理削除） ======
+    function renderCategoryManager() {
+      const el = document.getElementById('catManageList');
+      const cats = activeCategories();
+      el.innerHTML = cats.map(c => `
+        <div class="list-item">
+          <div>
+            <div><strong>${esc(c.cat1)} &gt; ${esc(c.cat2)} &gt; ${esc(c.cat3)}</strong></div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">
+              ID:${c.category_id}
+              ${c.shortcut_label ? '・SC:' + esc(c.shortcut_label) : ''}
+              ${c.is_food ? '・🍽カロリー対象' : ''}
+              ${c.fixed_kcal != null ? '・固定' + c.fixed_kcal + 'kcal' : ''}
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-sub btn-sm" onclick="editCategory('${c.category_id}')">編集</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteCategory('${c.category_id}')">削除</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function editCategory(catId) {
+      const c = state.categories.find(x => x.category_id === catId);
+      if (!c) return;
+      document.getElementById('catFormTitle').textContent = `✏️ 分類を編集（${c.category_id}）`;
+      document.getElementById('editCatId').value = c.category_id;
+      document.getElementById('fCat1').value = c.cat1;
+      document.getElementById('fCat2').value = c.cat2;
+      document.getElementById('fCat3').value = c.cat3;
+      document.getElementById('fShortcut').value = c.shortcut_label || '';
+      document.getElementById('fFixedKcal').value = c.fixed_kcal ?? '';
+      document.getElementById('fDefAmt').value = c.default_amount ?? '';
+      document.getElementById('fIsFood').checked = Boolean(c.is_food);
+      document.getElementById('fSort').value = c.sort_order ?? 100;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function resetCategoryForm() {
+      document.getElementById('catFormTitle').textContent = '➕ 分類を追加 / 編集';
+      ['editCatId','fCat1','fCat2','fCat3','fShortcut','fFixedKcal','fDefAmt'].forEach(id => {
+        document.getElementById(id).value = '';
+      });
+      document.getElementById('fIsFood').checked = false;
+      document.getElementById('fSort').value = 100;
+    }
+
+    async function saveCategoryForm() {
+      const cat = {
+        category_id: document.getElementById('editCatId').value || undefined,
+        cat1: document.getElementById('fCat1').value.trim(),
+        cat2: document.getElementById('fCat2').value.trim(),
+        cat3: document.getElementById('fCat3').value.trim(),
+        shortcut_label: document.getElementById('fShortcut').value.trim(),
+        fixed_kcal: document.getElementById('fFixedKcal').value.trim() === '' ? null : Number(document.getElementById('fFixedKcal').value),
+        default_amount: document.getElementById('fDefAmt').value.trim() === '' ? null : Number(document.getElementById('fDefAmt').value),
+        is_food: document.getElementById('fIsFood').checked,
+        sort_order: Number(document.getElementById('fSort').value || 100),
+        active: true
+      };
+      if (!cat.cat1 || !cat.cat2 || !cat.cat3) return toast('大・中・小分類をすべて入力してください');
+
+      try {
+        const res = await postGas({ action: 'save_category', category: cat });
+        state.categories = res.categories;
+        persistLocal();
+        resetCategoryForm();
+        renderAll();
+        toast('分類を保存しました');
+      } catch (err) {
+        toast('保存エラー: ' + err.message);
+      }
+    }
+
+    async function deleteCategory(catId) {
+      if (!confirm('この分類を選択肢から削除（非表示）にしますか？\n※過去の記録やグラフはそのまま残ります。')) return;
+      try {
+        const res = await postGas({ action: 'delete_category', category_id: catId });
+        state.categories = res.categories;
+        persistLocal();
+        renderAll();
+        toast('分類を削除しました');
+      } catch (err) {
+        toast('削除エラー: ' + err.message);
+      }
+    }
+
+    // ====== 4. 設定・GAS通信・同期 ======
+    function saveSettings() {
+      state.settings = {
+        gasUrl: document.getElementById('setGasUrl').value.trim(),
+        token: document.getElementById('setToken').value.trim(),
+        targetCal: Number(document.getElementById('setTargetCal').value || 2000)
+      };
+      localStorage.setItem(KEYS.settings, JSON.stringify(state.settings));
+      syncAll(true);
+    }
+
+    function renderShortcutUrlSelect() {
+      const sel = document.getElementById('shortcutUrlSelect');
+      sel.innerHTML = activeCategories().map(c =>
+        `<option value="${c.category_id}">${esc(c.shortcut_label || (c.cat1 + ' / ' + c.cat2 + ' / ' + c.cat3))}</option>`
+      ).join('');
+    }
+
+    function copyShortcutUrl() {
+      const catId = document.getElementById('shortcutUrlSelect').value;
+      const base = location.origin + location.pathname;
+      const url = `${base}?cat=${encodeURIComponent(catId)}`;
+      navigator.clipboard.writeText(url).then(() => toast('ショートカットURLをコピーしました'));
+    }
+
+    async function postGas(payload) {
+      if (!state.settings.gasUrl || !state.settings.token) {
+        throw new Error('設定タブでGAS URLとトークンを設定してください');
+      }
+      const res = await fetch(state.settings.gasUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ ...payload, token: state.settings.token })
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || 'APIエラー');
+      return data;
+    }
+
+    async function flushQueue() {
+      if (!state.queue.length || !navigator.onLine || !state.settings.gasUrl) {
+        updateSyncBadge();
+        return;
+      }
+      const batch = [...state.queue];
+      try {
+        await postGas({ action: 'add_records', records: batch });
+        const sentIds = new Set(batch.map(x => x.record_id));
+        state.queue = state.queue.filter(x => !sentIds.has(x.record_id));
+        state.records.forEach(r => { if (sentIds.has(r.record_id)) delete r._unsynced; });
+        persistLocal();
+        renderRecentList();
+        updateSyncBadge();
+      } catch (_) {
+        updateSyncBadge(); // オフラインまたは一時エラー時はキューに残す
+      }
+    }
+
+    async function syncAll(showMsg) {
+      if (!state.settings.gasUrl || !state.settings.token) {
+        updateSyncBadge();
+        if (showMsg) toast('設定タブでURLとトークンを登録してください');
+        return;
+      }
+      await flushQueue();
+      try {
+        const url = `${state.settings.gasUrl}?action=bootstrap&token=${encodeURIComponent(state.settings.token)}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error);
+
+        state.categories = data.categories;
+        // サーバーの最新データ ＋ まだローカルに残る未送信キューをマージ
+        const serverIds = new Set(data.records.map(r => r.record_id));
+        const pendingLocal = state.queue.filter(r => !serverIds.has(r.record_id));
+        state.records = [...data.records, ...pendingLocal];
+
+        persistLocal();
+        renderAll();
+        updateSyncBadge();
+        if (showMsg) toast('同期が完了しました');
+      } catch (err) {
+        updateSyncBadge();
+        if (showMsg) toast('同期失敗: ' + err.message);
+      }
+    }
+
+    async function triggerAiNow() {
+      try {
+        toast('AIカロリー計算を実行中...');
+        const res = await postGas({ action: 'run_ai_now' });
+        await syncAll(false);
+        toast(`AI計算完了（${res.processed}件処理）`);
+      } catch (err) {
+        toast('エラー: ' + err.message);
+      }
+    }
+
+    function updateSyncBadge() {
+      const el = document.getElementById('syncStatus');
+      if (!state.settings.gasUrl) {
+        el.textContent = '未設定'; el.className = 'status-pill';
+      } else if (state.queue.length > 0) {
+        el.textContent = `未同期 ${state.queue.length}件`; el.className = 'status-pill pending';
+      } else {
+        el.textContent = '同期済'; el.className = 'status-pill ok';
+      }
+    }
+
+    function persistLocal() {
+      localStorage.setItem(KEYS.categories, JSON.stringify(state.categories));
+      localStorage.setItem(KEYS.records, JSON.stringify(state.records));
+      localStorage.setItem(KEYS.queue, JSON.stringify(state.queue));
+    }
+
+    function renderAll() {
+      renderInputControls();
+      renderRecentList();
+      renderCategoryManager();
+      renderShortcutUrlSelect();
+    }
+
+    function formatDateJst(d) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+
+    function esc(s) {
+      return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    }
+    function escAttr(s) { return esc(s).replace(/\\/g, '\\\\'); }
+  </script>
+</body>
+</html>
