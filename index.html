@@ -123,12 +123,13 @@
     /* フォーム */
     .field { margin-bottom: 12px; }
     .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; font-weight: 600; }
-    input[type="text"], input[type="number"], input[type="url"], input[type="password"], input[type="time"], textarea, select {
-      width: 100%; padding: 11px 12px; font-size: 15px; border: 1.5px solid var(--border);
+    input[type="text"], input[type="number"], input[type="url"], input[type="password"], input[type="time"], input[type="search"], textarea, select {
+      width: 100%; padding: 10px 11px; font-size: 15px; border: 1.5px solid var(--border);
       border-radius: 10px; background: #fff; color: var(--text); outline: none;
     }
     input:focus, textarea:focus, select:focus { border-color: var(--primary); }
     .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
     .btn {
       width: 100%; border: none; border-radius: 12px; padding: 13px;
       font-size: 15px; font-weight: 700; cursor: pointer; transition: 0.15s;
@@ -160,6 +161,22 @@
       padding: 10px 12px; font-size: 12px; color: var(--muted); margin-bottom: 12px; line-height: 1.6;
     }
     .info-box strong { color: var(--text); }
+
+    /* 記録タブ：検索サマリーバー */
+    .filter-summary {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+      margin-bottom: 12px;
+    }
+    .fs-box {
+      background: var(--card); border-radius: 12px; padding: 10px 8px;
+      text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .fs-label { font-size: 10px; color: var(--muted); }
+    .fs-val { font-size: 15px; font-weight: 800; margin-top: 2px; }
+    .filter-head {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;
+    }
+    .filter-head .section-title { margin: 0; }
 
     /* 編集モーダル */
     .modal-backdrop {
@@ -212,19 +229,20 @@
     .badge-ai { background: #fef3c7; color: var(--warn); }
     .badge-off { background: #e5e7eb; color: #4b5563; }
 
-    /* ボトムナビ */
+    /* ボトムナビ（5タブ対応） */
     nav.bottom-nav {
       position: fixed; bottom: 0; left: 0; right: 0; z-index: 30;
       background: var(--card); border-top: 1px solid var(--border);
-      display: grid; grid-template-columns: repeat(4, 1fr);
+      display: grid; grid-template-columns: repeat(5, 1fr);
       padding-bottom: env(safe-area-inset-bottom);
     }
     nav.bottom-nav button {
-      border: none; background: transparent; padding: 10px 4px;
-      font-size: 11px; color: var(--muted); cursor: pointer;
+      border: none; background: transparent; padding: 9px 2px;
+      font-size: 10px; color: var(--muted); cursor: pointer;
       display: flex; flex-direction: column; align-items: center; gap: 2px;
+      white-space: nowrap;
     }
-    nav.bottom-nav button span.ico { font-size: 19px; }
+    nav.bottom-nav button span.ico { font-size: 18px; }
     nav.bottom-nav button.active { color: var(--primary); font-weight: 700; }
 
     .toast {
@@ -332,7 +350,72 @@
       </div>
     </section>
 
-    <!-- ========== 2. グラフ分析タブ ========== -->
+    <!-- ========== 2. 記録（履歴検索）タブ ========== -->
+    <section id="view-history" class="view">
+      <div class="card">
+        <div class="filter-head">
+          <p class="section-title">🔍 記録を検索・絞り込み</p>
+          <button class="btn btn-sub btn-sm" onclick="resetHistoryFilter()">クリア</button>
+        </div>
+
+        <div class="row-3">
+          <div class="field" style="margin-bottom:8px;">
+            <label for="histCat1">大分類</label>
+            <select id="histCat1" onchange="onHistoryCat1Change()"></select>
+          </div>
+          <div class="field" style="margin-bottom:8px;">
+            <label for="histCat2">中分類</label>
+            <select id="histCat2" onchange="onHistoryCat2Change()"></select>
+          </div>
+          <div class="field" style="margin-bottom:8px;">
+            <label for="histCat3">小分類</label>
+            <select id="histCat3" onchange="onHistoryCat3Change()"></select>
+          </div>
+        </div>
+
+        <div class="row-2">
+          <div class="field" style="margin-bottom:0;">
+            <label for="histPeriod">期間</label>
+            <select id="histPeriod" onchange="onHistoryFilterChange()">
+              <option value="all">全期間（直近1年）</option>
+              <option value="this_month">今月</option>
+              <option value="last_month">先月</option>
+              <option value="7d">直近7日間</option>
+              <option value="30d">直近30日間</option>
+            </select>
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label for="histKeyword">メモ検索</label>
+            <input id="histKeyword" type="search" placeholder="キーワード" oninput="onHistoryFilterChange()" />
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-summary">
+        <div class="fs-box">
+          <div class="fs-label">該当件数</div>
+          <div id="histSumCount" class="fs-val">0 件</div>
+        </div>
+        <div class="fs-box">
+          <div class="fs-label">支出合計</div>
+          <div id="histSumAmt" class="fs-val">¥0</div>
+        </div>
+        <div class="fs-box">
+          <div class="fs-label">カロリー合計</div>
+          <div id="histSumCal" class="fs-val">0 kcal</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="section-title" id="histListTitle">📋 記録一覧</p>
+        <div id="historyList"></div>
+        <div id="histLoadMoreWrap" style="margin-top:12px; display:none;">
+          <button class="btn btn-sub" onclick="loadMoreHistory()">さらに50件を表示</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== 3. グラフ分析タブ ========== -->
     <section id="view-charts" class="view">
       <div class="period-tabs" id="periodTabs">
         <button class="period-tab active" data-period="daily">日次</button>
@@ -366,7 +449,7 @@
       </div>
     </section>
 
-    <!-- ========== 3. 分類管理タブ ========== -->
+    <!-- ========== 4. 分類管理タブ ========== -->
     <section id="view-categories" class="view">
       <div class="card">
         <p class="section-title" id="catFormTitle">➕ 分類を追加 / 編集</p>
@@ -401,7 +484,7 @@
       </div>
     </section>
 
-    <!-- ========== 4. 設定タブ ========== -->
+    <!-- ========== 5. 設定タブ ========== -->
     <section id="view-settings" class="view">
       <!-- 曜日・時間帯デフォルト設定（シート自動同期） -->
       <div class="card">
@@ -493,6 +576,7 @@
 
   <nav class="bottom-nav">
     <button class="active" data-view="input"><span class="ico">✏️</span>入力</button>
+    <button data-view="history"><span class="ico">📋</span>記録</button>
     <button data-view="charts"><span class="ico">📊</span>グラフ</button>
     <button data-view="categories"><span class="ico">🏷️</span>分類管理</button>
     <button data-view="settings"><span class="ico">⚙️</span>設定</button>
@@ -530,6 +614,8 @@
       autoRulesDirty: localStorage.getItem(KEYS.autoRulesDirty) === '1',
       holidaysCache: JSON.parse(localStorage.getItem(KEYS.holidays) || '{"fetchedAt":0,"dates":{}}'),
       selCat1: '', selCat2: '', selCatId: '',
+      histFilter: { cat1: '', cat2: '', cat3: '', period: 'all', keyword: '' },
+      histLimit: 50,
       userManuallyPicked: false,
       hasUrlCatParam: false,
       period: 'daily',
@@ -608,6 +694,7 @@
       document.querySelectorAll('.bottom-nav button').forEach(b => {
         b.classList.toggle('active', b.dataset.view === name);
       });
+      if (name === 'history') renderHistoryView();
       if (name === 'charts') renderCharts();
       if (name === 'categories') renderCategoryManager();
       if (name === 'settings') {
@@ -954,6 +1041,7 @@
       document.getElementById('inpMemo').value = '';
 
       renderRecentList();
+      renderHistoryView();
       updateSyncBadge();
       toast('記録しました');
       flushQueue();
@@ -1038,19 +1126,18 @@
       Object.assign(rec, updatedFields);
       closeEditModal();
 
-      // 新規未送信キューに入っている場合はキュー内を直接更新
       const queuedNew = state.queue.find(q => q.record_id === recordId);
       if (queuedNew) {
         Object.assign(queuedNew, updatedFields);
         persistLocal();
         renderRecentList();
+        renderHistoryView();
         updateSyncBadge();
         toast('未同期の記録を更新しました');
         flushQueue();
         return;
       }
 
-      // サーバー送信済みの場合は編集キューへ追加して即時送信
       rec._unsynced = true;
       const existingIdx = state.updateQueue.findIndex(u => u.record_id === recordId);
       if (existingIdx >= 0) {
@@ -1061,6 +1148,7 @@
 
       persistLocal();
       renderRecentList();
+      renderHistoryView();
       updateSyncBadge();
 
       const synced = await flushUpdateQueue();
@@ -1094,6 +1182,7 @@
         state.queue = state.queue.filter(q => q.record_id !== recordId);
         persistLocal();
         renderRecentList();
+        renderHistoryView();
         updateSyncBadge();
         toast('未同期の記録を削除しました');
         return;
@@ -1104,6 +1193,7 @@
       }
       persistLocal();
       renderRecentList();
+      renderHistoryView();
       updateSyncBadge();
 
       const synced = await flushDeleteQueue();
@@ -1114,41 +1204,223 @@
       }
     }
 
+    function toSortMillis(rec) {
+      const ts = String(rec.timestamp || '').trim();
+      if (ts) {
+        // "YYYY-MM-DD HH:mm:ss" 形式はJSTとして扱う
+        const normalized = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(ts)
+          ? ts.replace(' ', 'T') + '+09:00'
+          : ts;
+        const parsed = Date.parse(normalized);
+        if (!Number.isNaN(parsed)) return parsed;
+      }
+      const d = Date.parse((rec.date || '1970-01-01') + 'T00:00:00+09:00');
+      return Number.isNaN(d) ? 0 : d;
+    }
+
+    function renderRecordRowHtml(r) {
+      const badges = [];
+      badges.push(`<span class="badge">${esc(r.cat1)} › ${esc(r.cat2)} › ${esc(r.cat3)}</span>`);
+      if (r._unsynced) badges.push('<span class="badge badge-off">未同期</span>');
+      if (r.cal_status === 'PENDING') badges.push('<span class="badge badge-ai">AI計算待ち</span>');
+      const rightAmt = r.amount != null ? `¥${r.amount.toLocaleString()}` : '';
+      const rightCal = r.calories != null ? `${r.calories} kcal` : '';
+      return `
+        <div class="list-item" style="align-items:flex-start;">
+          <div style="min-width:0; flex:1;">
+            <div>${badges.join('')}</div>
+            <div style="margin-top:3px; word-break:break-word;">${esc(r.memo || '(メモなし)')}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">${esc(r.date)} ${r.cal_note ? '・' + esc(r.cal_note) : ''}</div>
+          </div>
+          <div style="text-align:right;white-space:nowrap;font-weight:700;">
+            <div>${rightAmt}</div>
+            <div style="font-size:12px;color:var(--warn);">${rightCal}</div>
+            <div class="item-actions">
+              <button class="btn-edit-mini" onclick="openEditModal('${escAttr(r.record_id)}')">編集</button>
+              <button class="btn-del-mini" onclick="deleteRecord('${escAttr(r.record_id)}')">削除</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     function renderRecentList() {
       const listEl = document.getElementById('recentList');
-      const items = [...state.records].slice(-10).reverse();
+      const items = [...state.records].sort((a, b) => toSortMillis(b) - toSortMillis(a)).slice(0, 10);
       if (!items.length) {
         listEl.innerHTML = '<div style="color:var(--muted);font-size:13px;">まだ記録がありません</div>';
         return;
       }
-      listEl.innerHTML = items.map(r => {
-        const badges = [];
-        badges.push(`<span class="badge">${esc(r.cat1)} › ${esc(r.cat2)} › ${esc(r.cat3)}</span>`);
-        if (r._unsynced) badges.push('<span class="badge badge-off">未同期</span>');
-        if (r.cal_status === 'PENDING') badges.push('<span class="badge badge-ai">AI計算待ち</span>');
-        const rightAmt = r.amount != null ? `¥${r.amount.toLocaleString()}` : '';
-        const rightCal = r.calories != null ? `${r.calories} kcal` : '';
-        return `
-          <div class="list-item" style="align-items:flex-start;">
-            <div style="min-width:0; flex:1;">
-              <div>${badges.join('')}</div>
-              <div style="margin-top:3px; word-break:break-word;">${esc(r.memo || '(メモなし)')}</div>
-              <div style="font-size:11px;color:var(--muted);margin-top:2px;">${esc(r.date)} ${r.cal_note ? '・' + esc(r.cal_note) : ''}</div>
-            </div>
-            <div style="text-align:right;white-space:nowrap;font-weight:700;">
-              <div>${rightAmt}</div>
-              <div style="font-size:12px;color:var(--warn);">${rightCal}</div>
-              <div class="item-actions">
-                <button class="btn-edit-mini" onclick="openEditModal('${escAttr(r.record_id)}')">編集</button>
-                <button class="btn-del-mini" onclick="deleteRecord('${escAttr(r.record_id)}')">削除</button>
-              </div>
-            </div>
-          </div>
-        `;
-      }).join('');
+      listEl.innerHTML = items.map(renderRecordRowHtml).join('');
     }
 
-    // ====== 2. 6期間グラフ分析 ======
+    // ====== 2. 記録（履歴検索）タブ ======
+    function collectAllTaxonomyPairs() {
+      // マスタ（表示順優先）＋ 過去記録にある旧分類も含めて重複除去
+      const items = [];
+      const seen = new Set();
+      const push = (c1, c2, c3) => {
+        if (!c1 && !c2 && !c3) return;
+        const key = `${c1}\u0000${c2}\u0000${c3}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        items.push({ cat1: c1 || '', cat2: c2 || '', cat3: c3 || '' });
+      };
+      [...state.categories]
+        .sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999))
+        .forEach(c => push(c.cat1, c.cat2, c.cat3));
+      state.records.forEach(r => push(r.cat1, r.cat2, r.cat3));
+      return items;
+    }
+
+    function renderHistoryFilters() {
+      const allPairs = collectAllTaxonomyPairs();
+      const f = state.histFilter;
+
+      // 大分類
+      const cat1Opts = [...new Set(allPairs.map(p => p.cat1).filter(Boolean))];
+      if (f.cat1 && !cat1Opts.includes(f.cat1)) f.cat1 = '';
+      const sel1 = document.getElementById('histCat1');
+      sel1.innerHTML = `<option value="">すべて</option>` + cat1Opts.map(v => `<option value="${escAttr(v)}">${esc(v)}</option>`).join('');
+      sel1.value = f.cat1;
+
+      // 中分類（大分類で連動絞り込み）
+      const cat2Source = f.cat1 ? allPairs.filter(p => p.cat1 === f.cat1) : allPairs;
+      const cat2Opts = [...new Set(cat2Source.map(p => p.cat2).filter(Boolean))];
+      if (f.cat2 && !cat2Opts.includes(f.cat2)) f.cat2 = '';
+      const sel2 = document.getElementById('histCat2');
+      sel2.innerHTML = `<option value="">すべて</option>` + cat2Opts.map(v => `<option value="${escAttr(v)}">${esc(v)}</option>`).join('');
+      sel2.value = f.cat2;
+
+      // 小分類（大分類＋中分類で連動絞り込み）
+      const cat3Source = cat2Source.filter(p => !f.cat2 || p.cat2 === f.cat2);
+      const cat3Opts = [...new Set(cat3Source.map(p => p.cat3).filter(Boolean))];
+      if (f.cat3 && !cat3Opts.includes(f.cat3)) f.cat3 = '';
+      const sel3 = document.getElementById('histCat3');
+      sel3.innerHTML = `<option value="">すべて</option>` + cat3Opts.map(v => `<option value="${escAttr(v)}">${esc(v)}</option>`).join('');
+      sel3.value = f.cat3;
+
+      document.getElementById('histPeriod').value = f.period;
+      if (document.getElementById('histKeyword').value !== f.keyword) {
+        document.getElementById('histKeyword').value = f.keyword;
+      }
+    }
+
+    function onHistoryCat1Change() {
+      state.histFilter.cat1 = document.getElementById('histCat1').value;
+      state.histFilter.cat2 = '';
+      state.histFilter.cat3 = '';
+      state.histLimit = 50;
+      renderHistoryView();
+    }
+
+    function onHistoryCat2Change() {
+      state.histFilter.cat2 = document.getElementById('histCat2').value;
+      state.histFilter.cat3 = '';
+      state.histLimit = 50;
+      renderHistoryView();
+    }
+
+    function onHistoryCat3Change() {
+      state.histFilter.cat3 = document.getElementById('histCat3').value;
+      state.histLimit = 50;
+      renderHistoryView();
+    }
+
+    function onHistoryFilterChange() {
+      state.histFilter.period = document.getElementById('histPeriod').value;
+      state.histFilter.keyword = document.getElementById('histKeyword').value.trim();
+      state.histLimit = 50;
+      renderHistoryList();
+    }
+
+    function resetHistoryFilter() {
+      state.histFilter = { cat1: '', cat2: '', cat3: '', period: 'all', keyword: '' };
+      state.histLimit = 50;
+      renderHistoryView();
+    }
+
+    function loadMoreHistory() {
+      state.histLimit += 50;
+      renderHistoryList();
+    }
+
+    function getFilteredHistoryRecords() {
+      const f = state.histFilter;
+      const now = new Date();
+      let startDate = '';
+      let endDate = '';
+
+      if (f.period === 'this_month') {
+        const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        startDate = ym + '-01';
+      } else if (f.period === 'last_month') {
+        const first = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const last = new Date(now.getFullYear(), now.getMonth(), 0);
+        startDate = formatDateJst(first);
+        endDate = formatDateJst(last);
+      } else if (f.period === '7d') {
+        const d = new Date(now); d.setDate(d.getDate() - 6);
+        startDate = formatDateJst(d);
+      } else if (f.period === '30d') {
+        const d = new Date(now); d.setDate(d.getDate() - 29);
+        startDate = formatDateJst(d);
+      }
+
+      const kw = (f.keyword || '').toLowerCase();
+
+      return state.records
+        .filter(r => {
+          if (f.cat1 && r.cat1 !== f.cat1) return false;
+          if (f.cat2 && r.cat2 !== f.cat2) return false;
+          if (f.cat3 && r.cat3 !== f.cat3) return false;
+          if (startDate && r.date < startDate) return false;
+          if (endDate && r.date > endDate) return false;
+          if (kw) {
+            const hay = `${r.memo || ''} ${r.cat1 || ''} ${r.cat2 || ''} ${r.cat3 || ''} ${r.cal_note || ''}`.toLowerCase();
+            if (!hay.includes(kw)) return false;
+          }
+          return true;
+        })
+        .sort((a, b) => toSortMillis(b) - toSortMillis(a));
+    }
+
+    function renderHistoryList() {
+      const filtered = getFilteredHistoryRecords();
+      let sumAmt = 0;
+      let sumCal = 0;
+      filtered.forEach(r => {
+        if (r.amount != null) sumAmt += r.amount;
+        if (r.calories != null) sumCal += r.calories;
+      });
+
+      document.getElementById('histSumCount').textContent = `${filtered.length.toLocaleString()} 件`;
+      document.getElementById('histSumAmt').textContent = `¥${Math.round(sumAmt).toLocaleString()}`;
+      document.getElementById('histSumCal').textContent = `${Math.round(sumCal).toLocaleString()} kcal`;
+
+      const shown = filtered.slice(0, state.histLimit);
+      document.getElementById('histListTitle').textContent =
+        filtered.length > shown.length
+          ? `📋 記録一覧（${shown.length} / ${filtered.length} 件表示）`
+          : `📋 記録一覧（${filtered.length} 件）`;
+
+      const listEl = document.getElementById('historyList');
+      if (!filtered.length) {
+        listEl.innerHTML = '<div style="color:var(--muted);font-size:13px;">条件に一致する記録がありません</div>';
+      } else {
+        listEl.innerHTML = shown.map(renderRecordRowHtml).join('');
+      }
+
+      const moreWrap = document.getElementById('histLoadMoreWrap');
+      moreWrap.style.display = filtered.length > shown.length ? 'block' : 'none';
+    }
+
+    function renderHistoryView() {
+      renderHistoryFilters();
+      renderHistoryList();
+    }
+
+    // ====== 3. 6期間グラフ分析 ======
     function renderCharts() {
       const p = state.period;
       const now = new Date();
@@ -1283,7 +1555,7 @@
       return d;
     }
 
-    // ====== 3. 分類管理 ======
+    // ====== 4. 分類管理 ======
     function renderCategoryManager() {
       const el = document.getElementById('catManageList');
       const cats = activeCategories();
@@ -1371,7 +1643,7 @@
       }
     }
 
-    // ====== 4. 設定・GAS通信・同期 ======
+    // ====== 5. 設定・GAS通信・同期 ======
     function saveSettings() {
       state.settings = {
         gasUrl: document.getElementById('setGasUrl').value.trim(),
@@ -1426,6 +1698,7 @@
         });
         persistLocal();
         renderRecentList();
+        renderHistoryList();
         updateSyncBadge();
       } catch (_) {
         updateSyncBadge();
@@ -1445,6 +1718,7 @@
         state.records.forEach(r => { if (doneIds.has(r.record_id)) delete r._unsynced; });
         persistLocal();
         renderRecentList();
+        renderHistoryList();
         updateSyncBadge();
         return true;
       } catch (_) {
@@ -1566,6 +1840,7 @@
     function renderAll() {
       renderInputControls();
       renderRecentList();
+      renderHistoryView();
       renderCategoryManager();
       renderAutoRuleSettings();
       renderShortcutUrlSelect();
