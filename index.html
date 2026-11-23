@@ -17,6 +17,8 @@
       --l2-bg: #f0fdfa;
       --l3: #4f46e5;
       --l3-bg: #eef2ff;
+      --ai: #6d28d9;
+      --ai-bg: #f5f3ff;
       --bg: #f4f6f9;
       --card: #ffffff;
       --text: #1f2937;
@@ -57,23 +59,118 @@
       margin: 0 0 8px; letter-spacing: 0.03em;
     }
 
-    /* ライフログ ／ 体重・体脂肪 モード切り替えスイッチ */
+    /* 3モード切り替えスイッチ（つぶやき ／ ライフログ ／ 体重・体脂肪） */
     .mode-switch {
-      display: inline-grid; grid-template-columns: 1fr 1fr; gap: 4px;
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
       width: 100%; background: #e5e7eb; padding: 3px; border-radius: 11px;
       margin-bottom: 12px;
     }
     .mode-switch button {
       border: none; background: transparent; border-radius: 8px;
-      padding: 7px 10px; font-size: 12px; font-weight: 700; color: var(--muted);
-      cursor: pointer; transition: 0.15s;
+      padding: 7px 4px; font-size: 12px; font-weight: 700; color: var(--muted);
+      cursor: pointer; transition: 0.15s; white-space: nowrap;
+      display: flex; align-items: center; justify-content: center; gap: 3px;
     }
     .mode-switch button.active {
       background: #fff; color: var(--primary);
       box-shadow: 0 1px 3px rgba(0,0,0,0.08);
     }
-    .mode-switch button.active.body-active {
-      color: var(--l2);
+    .mode-switch button.active.tweet-active { color: var(--ai); }
+    .mode-switch button.active.body-active { color: var(--l2); }
+    .pill-cnt {
+      display: none; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px;
+      background: var(--ai); color: #fff; font-size: 10px; font-weight: 800;
+      align-items: center; justify-content: center;
+    }
+    .pill-cnt.show { display: inline-flex; }
+
+    /* 通知バナー（確認待ちつぶやき / 未分類） */
+    .inbox-banner {
+      display: none; align-items: center; justify-content: space-between; gap: 10px;
+      background: #fffbeb; border: 1.5px solid #fcd34d; border-radius: 12px;
+      padding: 10px 12px; margin-bottom: 10px; font-size: 12px; color: #92400e;
+    }
+    .inbox-banner.show { display: flex; }
+    .inbox-banner strong { font-weight: 800; }
+    .tweet-banner {
+      display: none; align-items: center; justify-content: space-between; gap: 10px;
+      background: var(--ai-bg); border: 1.5px solid #c4b5fd; border-radius: 12px;
+      padding: 10px 12px; margin-bottom: 10px; font-size: 12px; color: #4c1d95;
+    }
+    .tweet-banner.show { display: flex; }
+    .tweet-banner strong { font-weight: 800; }
+
+    /* つぶやき入力＆候補カード確認エリア */
+    .tweet-textarea {
+      min-height: 92px; line-height: 1.55; resize: vertical;
+      border-color: #ddd6fe !important; background: #faf8ff !important;
+    }
+    .tweet-textarea:focus { border-color: var(--ai) !important; background: #fff !important; }
+    .tweet-tip {
+      font-size: 11px; color: var(--muted); margin: -6px 0 10px; line-height: 1.5;
+    }
+    .btn-ai { background: var(--ai); color: #fff; }
+    .btn-ai:active { opacity: 0.85; transform: scale(0.99); }
+    .btn-ai:disabled { opacity: 0.55; cursor: wait; }
+
+    .draft-wrap {
+      margin-top: 14px; padding-top: 12px;
+      border-top: 1.5px dashed #c4b5fd;
+    }
+    .draft-head {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      margin-bottom: 10px;
+    }
+    .draft-head .section-title { margin: 0; color: var(--ai); }
+
+    .cand-card {
+      border: 1.5px solid var(--border); border-left-width: 4px;
+      border-radius: 12px; padding: 10px 11px; margin-bottom: 10px;
+      background: #fff;
+    }
+    .cand-card.type-record { border-left-color: var(--primary); }
+    .cand-card.type-body { border-left-color: var(--l2); background: #f8fffe; }
+    .cand-head {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      margin-bottom: 8px;
+    }
+    .cand-type-pill {
+      font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 999px;
+    }
+    .cand-type-pill.record { background: var(--primary-bg); color: var(--primary); }
+    .cand-type-pill.body { background: var(--l2-bg); color: var(--l2); }
+    .cand-del-btn {
+      border: 1px solid #fecaca; background: #fef2f2; color: var(--danger);
+      border-radius: 6px; padding: 3px 8px; font-size: 11px; font-weight: 700;
+      cursor: pointer;
+    }
+    .cand-reason {
+      font-size: 11px; color: var(--muted); background: #f8fafc;
+      border-radius: 6px; padding: 4px 8px; margin-bottom: 8px;
+    }
+    .cand-warn {
+      font-size: 11px; font-weight: 700; color: #92400e; background: #fffbeb;
+      border: 1px solid #fcd34d; border-radius: 7px; padding: 5px 8px; margin-bottom: 8px;
+    }
+    .cand-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 7px; }
+    .cand-field { margin-bottom: 7px; }
+    .cand-field:last-child { margin-bottom: 0; }
+    .cand-field label {
+      display: block; font-size: 10px; font-weight: 700; color: var(--muted); margin-bottom: 2px;
+    }
+    .cand-card input, .cand-card select {
+      padding: 7px 9px; font-size: 13px; border-radius: 8px;
+    }
+    .cand-add-row {
+      display: flex; gap: 6px; margin-bottom: 10px;
+    }
+    .tweet-raw-box {
+      background: #f8fafc; border: 1px solid var(--border); border-radius: 10px;
+      padding: 9px 11px; margin-bottom: 12px; font-size: 13px; line-height: 1.55;
+      white-space: pre-wrap; word-break: break-word;
+    }
+    .tweet-raw-meta {
+      font-size: 11px; color: var(--muted); margin-bottom: 4px;
     }
 
     /* 体重：同日上書きバナー・ヒント・差分バッジ */
@@ -96,19 +193,8 @@
     .btn-teal { background: var(--l2); color: #fff; }
     .btn-teal:active { opacity: 0.85; transform: scale(0.99); }
 
-    /* 未分類アラートバナー（入力タブ上部） */
-    .inbox-banner {
-      display: none; align-items: center; justify-content: space-between; gap: 10px;
-      background: #fffbeb; border: 1.5px solid #fcd34d; border-radius: 12px;
-      padding: 10px 12px; margin-bottom: 12px; font-size: 12px; color: #92400e;
-    }
-    .inbox-banner.show { display: flex; }
-    .inbox-banner strong { font-weight: 800; }
-
     /* ショートカット（分類エリア内に格納） */
-    .shortcut-wrap {
-      margin-bottom: 10px;
-    }
+    .shortcut-wrap { margin-bottom: 10px; }
     .shortcut-grid {
       display: grid; grid-template-columns: repeat(auto-fill, minmax(106px, 1fr)); gap: 6px;
     }
@@ -127,18 +213,14 @@
       background: #f8fafc; border: 1px solid var(--border); border-radius: 10px;
       padding: 8px 10px; margin-bottom: 10px; font-size: 12px; font-weight: 700;
     }
-    .selected-path.unassigned-mode {
-      background: #fffbeb; border-color: #fcd34d;
-    }
+    .selected-path.unassigned-mode { background: #fffbeb; border-color: #fcd34d; }
     .path-tag { padding: 2px 7px; border-radius: 6px; }
     .path-tag.l1 { background: var(--l1-bg); color: var(--l1); }
     .path-tag.l2 { background: var(--l2-bg); color: var(--l2); }
     .path-tag.l3 { background: var(--l3-bg); color: var(--l3); }
     .path-tag.unassigned { background: #fef3c7; color: #b45309; }
     .path-sep { color: #9ca3af; font-weight: 400; }
-    .path-controls {
-      margin-left: auto; display: flex; align-items: center; gap: 5px;
-    }
+    .path-controls { margin-left: auto; display: flex; align-items: center; gap: 5px; }
     .auto-reset-btn {
       border: 1px solid var(--border); background: #fff;
       border-radius: 999px; padding: 3px 8px; font-size: 11px; color: var(--muted);
@@ -220,26 +302,25 @@
 
     /* リスト内アクション＆AI分類提案ボックス */
     .item-actions {
-      display: flex; justify-content: flex-end; gap: 5px; margin-top: 5px;
+      display: flex; justify-content: flex-end; gap: 5px; margin-top: 5px; flex-wrap: wrap;
     }
     .btn-edit-mini {
       border: 1px solid #bfdbfe; background: #eff6ff; color: var(--primary);
-      border-radius: 6px; padding: 3px 8px; font-size: 11px; font-weight: 700;
-      cursor: pointer;
+      border-radius: 6px; padding: 3px 8px; font-size: 11px; font-weight: 700; cursor: pointer;
     }
-    .btn-edit-mini:active { background: #dbeafe; }
+    .btn-ai-mini {
+      border: 1px solid #c4b5fd; background: var(--ai-bg); color: var(--ai);
+      border-radius: 6px; padding: 3px 8px; font-size: 11px; font-weight: 700; cursor: pointer;
+    }
     .btn-del-mini {
       border: 1px solid #fecaca; background: #fef2f2; color: var(--danger);
-      border-radius: 6px; padding: 3px 8px; font-size: 11px; font-weight: 700;
-      cursor: pointer;
+      border-radius: 6px; padding: 3px 8px; font-size: 11px; font-weight: 700; cursor: pointer;
     }
-    .btn-del-mini:active { background: #fee2e2; }
     .btn-approve-mini {
       border: 1px solid #6ee7b7; background: #059669; color: #fff;
       border-radius: 6px; padding: 3px 9px; font-size: 11px; font-weight: 700;
       cursor: pointer; white-space: nowrap;
     }
-    .btn-approve-mini:active { opacity: 0.85; }
     .ai-sug-box {
       margin-top: 6px; padding: 6px 8px; border-radius: 8px;
       background: #ecfdf5; border: 1px solid #a7f3d0;
@@ -264,8 +345,7 @@
       background: #d97706; border-color: #b45309; color: #fff;
     }
     .filter-summary {
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
-      margin-bottom: 12px;
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px;
     }
     .fs-box {
       background: var(--card); border-radius: 12px; padding: 10px 8px;
@@ -278,7 +358,7 @@
     }
     .filter-head .section-title { margin: 0; }
 
-    /* 編集モーダル */
+    /* 編集・確認モーダル */
     .modal-backdrop {
       position: fixed; inset: 0; z-index: 60;
       background: rgba(15, 23, 42, 0.48);
@@ -286,13 +366,12 @@
     }
     .modal-backdrop.open { display: flex; }
     .modal-card {
-      width: 100%; max-width: 480px; background: var(--card);
+      width: 100%; max-width: 520px; background: var(--card);
       border-radius: 16px; padding: 16px; box-shadow: 0 12px 32px rgba(0,0,0,0.2);
       max-height: 92vh; overflow-y: auto;
     }
     .modal-head {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 10px;
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;
     }
     .modal-head h2 { margin: 0; font-size: 15px; font-weight: 700; }
     .modal-close {
@@ -338,7 +417,7 @@
     .chart-box { position: relative; height: 240px; width: 100%; }
     .chart-box-sm { position: relative; height: 210px; width: 100%; }
 
-    /* リスト */
+    /* リスト＆バッジ */
     .list-item {
       display: flex; justify-content: space-between; align-items: center; gap: 10px;
       padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px;
@@ -349,12 +428,14 @@
       background: var(--primary-bg); color: var(--primary); font-weight: 600; margin-right: 4px;
     }
     .badge-teal { background: var(--l2-bg); color: var(--l2); font-weight: 700; }
+    .badge-ready { background: var(--ai-bg); color: var(--ai); font-weight: 700; }
     .badge-unassigned { background: #fef3c7; color: #b45309; font-weight: 700; }
     .badge-ai { background: #fef3c7; color: var(--warn); }
+    .badge-err { background: #fee2e2; color: var(--danger); font-weight: 700; }
     .badge-off { background: #e5e7eb; color: #4b5563; }
     .badge-ok { background: #d1fae5; color: var(--success); }
 
-    /* ボトムナビ（5タブ＋未分類バッジ） */
+    /* ボトムナビ（5タブ＋通知バッジ） */
     nav.bottom-nav {
       position: fixed; bottom: 0; left: 0; right: 0; z-index: 30;
       background: var(--card); border-top: 1px solid var(--border);
@@ -394,7 +475,7 @@
 
   <div id="toast" class="toast"></div>
 
-  <!-- ライフログ記録編集モーダル -->
+  <!-- 1. ライフログ記録編集モーダル -->
   <div id="editModal" class="modal-backdrop" onclick="if (event.target === this) closeEditModal();">
     <div class="modal-card">
       <div class="modal-head">
@@ -457,7 +538,7 @@
     </div>
   </div>
 
-  <!-- 体重・体脂肪 編集モーダル -->
+  <!-- 2. 体重・体脂肪 編集モーダル -->
   <div id="editBodyModal" class="modal-backdrop" onclick="if (event.target === this) closeEditBodyModal();">
     <div class="modal-card">
       <div class="modal-head">
@@ -500,22 +581,125 @@
     </div>
   </div>
 
+  <!-- 3. つぶやき確認・承認モーダル（裏バッチ分解の候補カード確認＆連続承認） -->
+  <div id="tweetReviewModal" class="modal-backdrop" onclick="if (event.target === this) closeTweetReviewModal();">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2 id="tweetReviewTitle">✨ つぶやきの確認・登録</h2>
+        <button class="modal-close" onclick="closeTweetReviewModal()" aria-label="閉じる">×</button>
+      </div>
+      <input type="hidden" id="reviewTweetId" />
+
+      <div class="tweet-raw-box">
+        <div id="reviewTweetMeta" class="tweet-raw-meta"></div>
+        <div id="reviewTweetRawText"></div>
+      </div>
+
+      <div id="modalTweetCards"></div>
+
+      <div class="cand-add-row">
+        <button type="button" class="btn btn-sub btn-sm" onclick="addCandidateCard('modal', 'record')">＋ ライフログ追加</button>
+        <button type="button" class="btn btn-sub btn-sm" onclick="addCandidateCard('modal', 'body')">＋ 体重追加</button>
+      </div>
+
+      <button id="btnTweetReviewNext" class="btn btn-success" style="margin-bottom:8px; display:none;" onclick="commitModalTweetReview(true)">
+        登録して次の確認待ちへ
+      </button>
+      <button id="btnTweetReviewCommit" class="btn btn-ai" style="margin-bottom:8px;" onclick="commitModalTweetReview(false)">
+        まとめて本登録する
+      </button>
+      <div class="row-2">
+        <button class="btn btn-danger" onclick="discardReviewingTweet()">このつぶやきを破棄</button>
+        <button class="btn btn-sub" onclick="closeTweetReviewModal()">キャンセル</button>
+      </div>
+    </div>
+  </div>
+
   <main>
-    <!-- ========== 1. 入力タブ ========== -->
+    <!-- ========== 1. 入力タブ（初期表示：✨ つぶやき） ========== -->
     <section id="view-input" class="view active">
-      <!-- 入力モード切り替えスイッチ -->
+      <!-- 3モード切り替えスイッチ -->
       <div class="mode-switch" id="inputModeSwitch">
-        <button type="button" class="active" data-mode="lifelog" onclick="switchInputMode('lifelog')">✏️ ライフログ</button>
+        <button type="button" class="active tweet-active" data-mode="tweet" onclick="switchInputMode('tweet')">
+          ✨ つぶやき<span id="inputTweetReadyPill" class="pill-cnt">0</span>
+        </button>
+        <button type="button" data-mode="lifelog" onclick="switchInputMode('lifelog')">✏️ ライフログ</button>
         <button type="button" data-mode="body" onclick="switchInputMode('body')">⚖️ 体重・体脂肪</button>
       </div>
 
-      <!-- 1-A. ライフログ入力 -->
-      <div id="inputLifelogWrap">
-        <div id="inputInboxBanner" class="inbox-banner">
-          <span>📥 未分類の記録が <strong id="inputInboxCount">0</strong> 件あります</span>
-          <button class="btn btn-warn btn-sm" onclick="jumpToUnassignedHistory()">整理する</button>
+      <!-- 確認待ちつぶやきバナー -->
+      <div id="tweetReadyBanner" class="tweet-banner">
+        <span>✨ AI分解済みのつぶやきが <strong id="tweetReadyCount">0</strong> 件あります</span>
+        <button class="btn btn-ai btn-sm" onclick="openFirstReadyTweet()">確認する</button>
+      </div>
+
+      <!-- 未分類ライフログバナー -->
+      <div id="inputInboxBanner" class="inbox-banner">
+        <span>📥 未分類の記録が <strong id="inputInboxCount">0</strong> 件あります</span>
+        <button class="btn btn-warn btn-sm" onclick="jumpToUnassignedHistory()">整理する</button>
+      </div>
+
+      <!-- 1-A. ✨ つぶやき入力（初期表示） -->
+      <div id="inputTweetWrap">
+        <div class="card">
+          <div class="field">
+            <label for="inpTweetText">今の出来事・食事・支出・体重・気持ちをそのまま入力</label>
+            <textarea id="inpTweetText" class="tweet-textarea" rows="3" autocomplete="off"
+              placeholder="例: 今朝68.2kg体脂肪18.1%。昼に豚骨ラーメン麺少なめ950円食べた。午後の会議がスムーズに終わって気分いい！"></textarea>
+          </div>
+          <div class="tweet-tip">
+            💡 1つの文章に複数ジャンルが混ざっていても自動で分割します（「今朝」「昨日の夜」などの日時も自動解釈）。
+          </div>
+
+          <!-- 投稿基準日時の指定 -->
+          <div class="dt-bar">
+            <span>🕒 投稿日時: <strong id="inpTweetDtStatus">現在時刻（自動）</strong></span>
+            <button type="button" id="inpTweetDtToggleBtn" class="btn btn-sub btn-sm" onclick="toggleTweetCustomDateTime()">日時を指定</button>
+          </div>
+          <div id="inpTweetDtFields" class="dt-fields">
+            <div class="field" style="margin-bottom:0;">
+              <label for="inpTweetDate">基準日</label>
+              <input id="inpTweetDate" type="date" onchange="updateTweetCustomDtLabel()" />
+            </div>
+            <div class="field" style="margin-bottom:0;">
+              <label for="inpTweetTime">時刻</label>
+              <input id="inpTweetTime" type="time" onchange="updateTweetCustomDtLabel()" />
+            </div>
+          </div>
+
+          <div class="row-2">
+            <button id="btnAnalyzeTweet" type="button" class="btn btn-ai" onclick="analyzeTweetNow()">✨ 今すぐAI解析</button>
+            <button id="btnQueueTweet" type="button" class="btn btn-sub" onclick="saveTweetForLater()">📥 とりあえず保存</button>
+          </div>
+
+          <!-- その場AI解析の候補カード確認エリア -->
+          <div id="tweetDraftArea" class="draft-wrap" style="display:none;">
+            <div class="draft-head">
+              <p class="section-title" id="tweetDraftTitle">✨ AI解析の候補カード（確認・微調整できます）</p>
+              <button type="button" class="btn btn-sub btn-sm" onclick="clearInlineTweetDraft()">閉じる</button>
+            </div>
+
+            <div id="tweetDraftCards"></div>
+
+            <div class="cand-add-row">
+              <button type="button" class="btn btn-sub btn-sm" onclick="addCandidateCard('inline', 'record')">＋ ライフログ追加</button>
+              <button type="button" class="btn btn-sub btn-sm" onclick="addCandidateCard('inline', 'body')">＋ 体重追加</button>
+            </div>
+
+            <button id="btnCommitDraft" type="button" class="btn btn-success" onclick="commitInlineTweetDraft()">
+              まとめて登録する
+            </button>
+          </div>
         </div>
 
+        <div class="card">
+          <p class="section-title">💬 待機中・最近のつぶやき</p>
+          <div id="recentTweetList"></div>
+        </div>
+      </div>
+
+      <!-- 1-B. ✏️ ライフログ手動入力 -->
+      <div id="inputLifelogWrap" style="display:none;">
         <div class="card">
           <!-- 1. 内容メモ -->
           <div class="field">
@@ -585,7 +769,7 @@
         </div>
       </div>
 
-      <!-- 1-B. 体重・体脂肪入力 -->
+      <!-- 1-C. ⚖️ 体重・体脂肪入力 -->
       <div id="inputBodyWrap" style="display:none;">
         <div class="card">
           <div id="bodyOverwriteBanner" class="overwrite-banner">
@@ -636,10 +820,13 @@
 
     <!-- ========== 2. 記録（履歴検索）タブ ========== -->
     <section id="view-history" class="view">
-      <!-- 履歴モード切り替えスイッチ -->
+      <!-- 履歴モード切り替えスイッチ（3モード） -->
       <div class="mode-switch" id="histModeSwitch">
         <button type="button" class="active" data-mode="lifelog" onclick="switchHistoryMode('lifelog')">📝 ライフログ</button>
         <button type="button" data-mode="body" onclick="switchHistoryMode('body')">⚖️ 体重・体脂肪</button>
+        <button type="button" data-mode="tweet" onclick="switchHistoryMode('tweet')">
+          ✨ つぶやき<span id="histTweetReadyPill" class="pill-cnt">0</span>
+        </button>
       </div>
 
       <!-- 2-A. ライフログ履歴 -->
@@ -758,6 +945,51 @@
           <div id="histBodyLoadMoreWrap" style="margin-top:12px; display:none;">
             <button class="btn btn-sub" onclick="loadMoreBodyHistory()">さらに50件を表示</button>
           </div>
+        </div>
+      </div>
+
+      <!-- 2-C. つぶやき履歴・確認待ち -->
+      <div id="histTweetWrap" style="display:none;">
+        <div class="card">
+          <div class="filter-head">
+            <p class="section-title">🔍 つぶやきを絞り込み</p>
+            <button class="btn btn-sub btn-sm" onclick="resetTweetHistoryFilter()">クリア</button>
+          </div>
+          <div class="row-2">
+            <div class="field" style="margin-bottom:0;">
+              <label for="histTweetStatus">ステータス</label>
+              <select id="histTweetStatus" onchange="onTweetHistoryFilterChange()">
+                <option value="all">すべて</option>
+                <option value="OPEN">未完了のみ（確認待ち・解析待ち・エラー）</option>
+                <option value="READY">確認待ち（READY）のみ</option>
+                <option value="DONE">登録済（DONE）のみ</option>
+              </select>
+            </div>
+            <div class="field" style="margin-bottom:0;">
+              <label for="histTweetKeyword">本文検索</label>
+              <input id="histTweetKeyword" type="search" autocomplete="off" placeholder="キーワード" oninput="onTweetHistoryFilterChange()" />
+            </div>
+          </div>
+        </div>
+
+        <div class="filter-summary">
+          <div class="fs-box">
+            <div class="fs-label">確認待ち</div>
+            <div id="histTweetCntReady" class="fs-val" style="color:var(--ai);">0 件</div>
+          </div>
+          <div class="fs-box">
+            <div class="fs-label">AI解析待ち</div>
+            <div id="histTweetCntPending" class="fs-val" style="color:var(--warn);">0 件</div>
+          </div>
+          <div class="fs-box">
+            <div class="fs-label">登録済履歴</div>
+            <div id="histTweetCntDone" class="fs-val" style="color:var(--success);">0 件</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <p class="section-title" id="histTweetListTitle">✨ つぶやき一覧</p>
+          <div id="historyTweetList"></div>
         </div>
       </div>
     </section>
@@ -934,7 +1166,7 @@
         <p class="section-title">🛠 メンテナンス</p>
         <div class="row-2">
           <button class="btn btn-sub" onclick="syncAll(true)">今すぐ最新同期</button>
-          <button class="btn btn-sub" onclick="triggerAiNow()">AI計算・分類を即時実行</button>
+          <button class="btn btn-sub" onclick="triggerAiNow()">AI計算・分類・分解を即時実行</button>
         </div>
       </div>
     </section>
@@ -950,7 +1182,7 @@
     <button data-view="categories"><span class="ico">🏷️</span>分類管理</button>
     <button data-view="settings"><span class="ico">⚙️</span>設定</button>
   </nav>
-  <script>
+<script>
     // ====== 定数・状態管理 ======
     const UNASSIGNED_ID = 'UNASSIGNED';
 
@@ -964,6 +1196,10 @@
       bodyLogs: 'll_body_logs_v1',
       bodyUpsertQueue: 'll_body_upsert_q_v1',
       bodyDeleteQueue: 'll_body_del_q_v1',
+      tweetInbox: 'll_tweet_inbox_v1',
+      tweetAddQueue: 'll_tweet_add_q_v1',
+      tweetCompleteQueue: 'll_tweet_done_q_v1',
+      tweetDeleteQueue: 'll_tweet_del_q_v1',
       autoRules: 'll_autorules_v1',
       autoRulesDirty: 'll_autorules_dirty_v1',
       holidays: 'll_holidays_v1'
@@ -986,22 +1222,30 @@
       bodyLogs: JSON.parse(localStorage.getItem(KEYS.bodyLogs) || '[]'),
       bodyUpsertQueue: JSON.parse(localStorage.getItem(KEYS.bodyUpsertQueue) || '[]'),
       bodyDeleteQueue: JSON.parse(localStorage.getItem(KEYS.bodyDeleteQueue) || '[]'),
+      tweetInbox: JSON.parse(localStorage.getItem(KEYS.tweetInbox) || '[]'),
+      tweetAddQueue: JSON.parse(localStorage.getItem(KEYS.tweetAddQueue) || '[]'),
+      tweetCompleteQueue: JSON.parse(localStorage.getItem(KEYS.tweetCompleteQueue) || '[]'),
+      tweetDeleteQueue: JSON.parse(localStorage.getItem(KEYS.tweetDeleteQueue) || '[]'),
       autoRules: JSON.parse(localStorage.getItem(KEYS.autoRules) || '{"fallbackCatId":"","rules":[]}'),
       autoRulesDirty: localStorage.getItem(KEYS.autoRulesDirty) === '1',
       holidaysCache: JSON.parse(localStorage.getItem(KEYS.holidays) || '{"fetchedAt":0,"dates":{}}'),
-      inputMode: 'lifelog',
+      inputMode: 'tweet',
       histMode: 'lifelog',
       selCat1: '', selCat2: '', selCatId: '',
       lastAutoAmount: null,
       lastAutoCal: null,
       unassignedMode: true,
+      useTweetCustomDateTime: false,
       useCustomDateTime: false,
       useBodyCustomDateTime: false,
+      inlineTweetDraft: null,
+      modalTweetDraft: null,
       editModalLegacyCat: null,
       histFilter: { cat1: '', cat2: '', cat3: '', period: 'all', keyword: '', unassignedOnly: false },
       histLimit: 50,
       histBodyFilter: { period: 'all', keyword: '' },
       histBodyLimit: 50,
+      histTweetFilter: { status: 'all', keyword: '' },
       userManuallyPicked: false,
       hasUrlCatParam: false,
       period: 'daily',
@@ -1045,9 +1289,11 @@
         state.hasUrlCatParam = true;
         state.unassignedMode = false;
         selectByCategoryId(urlCat, false);
+        switchInputMode('lifelog');
       } else {
         state.unassignedMode = true;
         applyAutoDefaultCategory(true);
+        switchInputMode('tweet');
       }
 
       renderAll();
@@ -1081,16 +1327,20 @@
       });
     });
 
-    // ====== モード切り替え（ライフログ ／ 体重・体脂肪） ======
+    // ====== 3モード切り替え・画面遷移・通知バッジ ======
     function switchInputMode(mode) {
       state.inputMode = mode;
       document.querySelectorAll('#inputModeSwitch button').forEach(b => {
         const isAct = b.dataset.mode === mode;
         b.classList.toggle('active', isAct);
+        b.classList.toggle('tweet-active', isAct && mode === 'tweet');
         b.classList.toggle('body-active', isAct && mode === 'body');
       });
+      document.getElementById('inputTweetWrap').style.display = mode === 'tweet' ? 'block' : 'none';
       document.getElementById('inputLifelogWrap').style.display = mode === 'lifelog' ? 'block' : 'none';
       document.getElementById('inputBodyWrap').style.display = mode === 'body' ? 'block' : 'none';
+
+      if (mode === 'tweet') renderRecentTweetList();
       if (mode === 'body') {
         updateBodyInputContext();
         renderRecentBodyList();
@@ -1102,65 +1352,16 @@
       document.querySelectorAll('#histModeSwitch button').forEach(b => {
         const isAct = b.dataset.mode === mode;
         b.classList.toggle('active', isAct);
+        b.classList.toggle('tweet-active', isAct && mode === 'tweet');
         b.classList.toggle('body-active', isAct && mode === 'body');
       });
       document.getElementById('histLifelogWrap').style.display = mode === 'lifelog' ? 'block' : 'none';
       document.getElementById('histBodyWrap').style.display = mode === 'body' ? 'block' : 'none';
-      if (mode === 'body') {
-        renderBodyHistoryView();
-      } else {
-        renderHistoryView();
-      }
-    }
+      document.getElementById('histTweetWrap').style.display = mode === 'tweet' ? 'block' : 'none';
 
-    function isRecordUnassigned(r) {
-      return !r || !r.category_id || r.category_id === UNASSIGNED_ID;
-    }
-
-    function getUnassignedRecordsSorted() {
-      return state.records
-        .filter(isRecordUnassigned)
-        .sort((a, b) => toSortMillis(b) - toSortMillis(a));
-    }
-
-    function updateUnassignedIndicators() {
-      const count = getUnassignedRecordsSorted().length;
-
-      const navBadge = document.getElementById('navUnassignedBadge');
-      navBadge.textContent = count > 99 ? '99+' : String(count);
-      navBadge.classList.toggle('show', count > 0);
-
-      const banner = document.getElementById('inputInboxBanner');
-      document.getElementById('inputInboxCount').textContent = String(count);
-      banner.classList.toggle('show', count > 0);
-
-      const fBtn = document.getElementById('btnUnassignedFilter');
-      const fLabel = document.getElementById('btnUnassignedLabel');
-      const fState = document.getElementById('btnUnassignedState');
-      fLabel.textContent = `📥 未分類のみ表示（${count}件）`;
-      fBtn.classList.toggle('active', state.histFilter.unassignedOnly);
-      fState.textContent = state.histFilter.unassignedOnly ? '絞り込み中（タップで解除）' : 'タップで絞り込み';
-    }
-
-    function jumpToUnassignedHistory() {
-      state.histFilter = { cat1: '', cat2: '', cat3: '', period: 'all', keyword: '', unassignedOnly: true };
-      state.histLimit = 50;
-      switchHistoryMode('lifelog');
-      switchView('history');
-    }
-
-    function refreshTokenFieldUI() {
-      const inp = document.getElementById('setToken');
-      const badge = document.getElementById('tokenStatusBadge');
-      const hasToken = Boolean(state.settings.token);
-      if (hasToken) {
-        badge.innerHTML = ' <span class="badge badge-ok">設定済</span>';
-        inp.placeholder = '設定済み（変更するときだけ入力）';
-      } else {
-        badge.innerHTML = ' <span class="badge badge-off">未設定</span>';
-        inp.placeholder = '自分で設定した合言葉を入力';
-      }
-      inp.value = '';
+      if (mode === 'body') renderBodyHistoryView();
+      else if (mode === 'tweet') renderTweetHistoryView();
+      else renderHistoryView();
     }
 
     function switchView(name) {
@@ -1179,12 +1380,16 @@
         tokenInp.disabled = true;
       }
 
-      if (name === 'input' && state.inputMode === 'body') {
-        updateBodyInputContext();
-        renderRecentBodyList();
+      if (name === 'input') {
+        if (state.inputMode === 'tweet') renderRecentTweetList();
+        if (state.inputMode === 'body') {
+          updateBodyInputContext();
+          renderRecentBodyList();
+        }
       }
       if (name === 'history') {
         if (state.histMode === 'body') renderBodyHistoryView();
+        else if (state.histMode === 'tweet') renderTweetHistoryView();
         else renderHistoryView();
       }
       if (name === 'charts') renderCharts();
@@ -1193,6 +1398,1267 @@
         renderAutoRuleSettings();
         renderShortcutUrlSelect();
       }
+    }
+
+    function isRecordUnassigned(r) {
+      return !r || !r.category_id || r.category_id === UNASSIGNED_ID;
+    }
+
+    function getUnassignedRecordsSorted() {
+      return state.records
+        .filter(isRecordUnassigned)
+        .sort((a, b) => toSortMillis(b) - toSortMillis(a));
+    }
+
+    function getReadyTweetsSorted() {
+      return state.tweetInbox
+        .filter(t => t.status === 'READY')
+        .sort((a, b) => toSortMillis(b) - toSortMillis(a));
+    }
+
+    function updateUnassignedIndicators() {
+      const unassignedCnt = getUnassignedRecordsSorted().length;
+      const readyTweetCnt = getReadyTweetsSorted().length;
+      const totalBadgeCnt = unassignedCnt + readyTweetCnt;
+
+      const navBadge = document.getElementById('navUnassignedBadge');
+      navBadge.textContent = totalBadgeCnt > 99 ? '99+' : String(totalBadgeCnt);
+      navBadge.classList.toggle('show', totalBadgeCnt > 0);
+
+      const banner = document.getElementById('inputInboxBanner');
+      document.getElementById('inputInboxCount').textContent = String(unassignedCnt);
+      banner.classList.toggle('show', unassignedCnt > 0);
+
+      const tweetBanner = document.getElementById('tweetReadyBanner');
+      document.getElementById('tweetReadyCount').textContent = String(readyTweetCnt);
+      tweetBanner.classList.toggle('show', readyTweetCnt > 0);
+
+      const inpPill = document.getElementById('inputTweetReadyPill');
+      inpPill.textContent = readyTweetCnt > 99 ? '99+' : String(readyTweetCnt);
+      inpPill.classList.toggle('show', readyTweetCnt > 0);
+
+      const histPill = document.getElementById('histTweetReadyPill');
+      histPill.textContent = readyTweetCnt > 99 ? '99+' : String(readyTweetCnt);
+      histPill.classList.toggle('show', readyTweetCnt > 0);
+
+      const fBtn = document.getElementById('btnUnassignedFilter');
+      const fLabel = document.getElementById('btnUnassignedLabel');
+      const fState = document.getElementById('btnUnassignedState');
+      fLabel.textContent = `📥 未分類のみ表示（${unassignedCnt}件）`;
+      fBtn.classList.toggle('active', state.histFilter.unassignedOnly);
+      fState.textContent = state.histFilter.unassignedOnly ? '絞り込み中（タップで解除）' : 'タップで絞り込み';
+    }
+
+    function jumpToUnassignedHistory() {
+      state.histFilter = { cat1: '', cat2: '', cat3: '', period: 'all', keyword: '', unassignedOnly: true };
+      state.histLimit = 50;
+      switchHistoryMode('lifelog');
+      switchView('history');
+    }
+
+    // ====== 1-A. ✨ つぶやき（その場AI解析 ／ 投げっぱなし保存 ／ 候補カード編集 ／ 連続承認） ======
+    function toggleTweetCustomDateTime(forceOff = false) {
+      state.useTweetCustomDateTime = forceOff ? false : !state.useTweetCustomDateTime;
+      const fields = document.getElementById('inpTweetDtFields');
+      const btn = document.getElementById('inpTweetDtToggleBtn');
+      if (state.useTweetCustomDateTime) {
+        const now = new Date();
+        document.getElementById('inpTweetDate').value = formatDateJst(now);
+        document.getElementById('inpTweetTime').value =
+          `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        fields.classList.add('open');
+        btn.textContent = '現在時刻に戻す';
+        updateTweetCustomDtLabel();
+      } else {
+        fields.classList.remove('open');
+        btn.textContent = '日時を指定';
+        document.getElementById('inpTweetDtStatus').textContent = '現在時刻（自動）';
+      }
+    }
+
+    function updateTweetCustomDtLabel() {
+      if (!state.useTweetCustomDateTime) return;
+      const d = document.getElementById('inpTweetDate').value;
+      const t = document.getElementById('inpTweetTime').value || '00:00';
+      document.getElementById('inpTweetDtStatus').textContent = d ? `${d} ${t}` : '日付を選択';
+    }
+
+    function getTweetInputTimestamp() {
+      if (state.useTweetCustomDateTime) {
+        const d = document.getElementById('inpTweetDate').value;
+        const t = document.getElementById('inpTweetTime').value || '00:00';
+        if (!d) return null;
+        return { dateStr: d, timestampStr: `${d} ${t}:00` };
+      }
+      const now = new Date();
+      return { dateStr: formatDateJst(now), timestampStr: now.toISOString() };
+    }
+
+    function newClientId(prefix) {
+      if (crypto.randomUUID) return crypto.randomUUID();
+      return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    }
+
+    // A. その場AI解析 → 候補カード表示（オフライン時は自動で投げっぱなし保存へ逃がす）
+    async function analyzeTweetNow() {
+      const text = document.getElementById('inpTweetText').value.trim();
+      if (!text) return toast('つぶやき内容を入力してください');
+
+      const dtInfo = getTweetInputTimestamp();
+      if (!dtInfo) return toast('基準日を選択してください');
+
+      if (!state.settings.gasUrl || !state.settings.token) {
+        return toast('設定タブでGAS URLとトークンを設定してください');
+      }
+
+      if (!navigator.onLine) {
+        saveTweetForLater(true);
+        return;
+      }
+
+      const btn = document.getElementById('btnAnalyzeTweet');
+      const prevLabel = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = '✨ AI解析中...';
+
+      try {
+        const res = await postGas({
+          action: 'parse_tweet',
+          text,
+          timestamp: dtInfo.timestampStr,
+          date: dtInfo.dateStr
+        });
+
+        const items = normalizeCandidateList(res.items, dtInfo.dateStr, dtInfo.timestampStr);
+        state.inlineTweetDraft = {
+          tweet_id: newClientId('tw'),
+          raw_text: text,
+          date: dtInfo.dateStr,
+          timestamp: dtInfo.timestampStr,
+          items
+        };
+        renderInlineTweetDraft();
+        toast(`AIが ${items.length} 件の候補を作成しました`);
+      } catch (err) {
+        if (!navigator.onLine) {
+          saveTweetForLater(true);
+        } else {
+          toast('AI解析エラー: ' + err.message);
+        }
+      } finally {
+        btn.disabled = false;
+        btn.textContent = prevLabel;
+      }
+    }
+
+    // B. 投げっぱなし → 裏バッチ分解用として即保存
+    function saveTweetForLater(fromOfflineFallback = false) {
+      const text = document.getElementById('inpTweetText').value.trim();
+      if (!text) return toast('つぶやき内容を入力してください');
+
+      const dtInfo = getTweetInputTimestamp();
+      if (!dtInfo) return toast('基準日を選択してください');
+
+      const isMobile = /iPhone|Android/i.test(navigator.userAgent);
+      const tweet = {
+        tweet_id: newClientId('tw'),
+        timestamp: dtInfo.timestampStr,
+        date: dtInfo.dateStr,
+        raw_text: text,
+        status: 'PENDING',
+        parsed_items: [],
+        error_note: '',
+        device: isMobile ? 'mobile' : 'pc',
+        _unsynced: true
+      };
+
+      state.tweetInbox.unshift(tweet);
+      state.tweetAddQueue.push({
+        tweet_id: tweet.tweet_id,
+        timestamp: tweet.timestamp,
+        date: tweet.date,
+        raw_text: tweet.raw_text,
+        status: 'PENDING',
+        parsed_items: [],
+        device: tweet.device
+      });
+      persistLocal();
+
+      document.getElementById('inpTweetText').value = '';
+      clearInlineTweetDraft();
+      if (state.useTweetCustomDateTime) toggleTweetCustomDateTime(true);
+
+      renderRecentTweetList();
+      renderTweetHistoryView();
+      updateUnassignedIndicators();
+      updateSyncBadge();
+
+      toast(fromOfflineFallback
+        ? 'オフラインのため一時保存しました（復帰後にAI分解します）'
+        : '保存しました（裏でAIが自動分解します）');
+      flushTweetAddQueue();
+    }
+
+    function normalizeCandidateList(items, fallbackDate, fallbackTs) {
+      const dt = extractDateAndTime({ date: fallbackDate, timestamp: fallbackTs });
+      const defDate = dt.date || formatDateJst(new Date());
+      const defTime = dt.time || '12:00';
+      const arr = Array.isArray(items) ? items : [];
+      return arr.map(it => {
+        if (it.type === 'body') {
+          return {
+            type: 'body',
+            date: it.date || defDate,
+            time: it.time || defTime,
+            weight: it.weight != null ? Number(it.weight) : '',
+            body_fat: it.body_fat != null ? Number(it.body_fat) : '',
+            memo: it.memo || '',
+            reason: it.reason || ''
+          };
+        }
+        return {
+          type: 'record',
+          date: it.date || defDate,
+          time: it.time || defTime,
+          category_id: it.category_id || UNASSIGNED_ID,
+          amount: it.amount != null ? Number(it.amount) : '',
+          calories: it.calories != null ? Number(it.calories) : '',
+          cal_note: it.cal_note || '',
+          memo: it.memo || '',
+          reason: it.reason || ''
+        };
+      });
+    }
+
+    function clearInlineTweetDraft() {
+      state.inlineTweetDraft = null;
+      document.getElementById('tweetDraftArea').style.display = 'none';
+      document.getElementById('tweetDraftCards').innerHTML = '';
+    }
+
+    function renderInlineTweetDraft() {
+      const area = document.getElementById('tweetDraftArea');
+      if (!state.inlineTweetDraft) {
+        area.style.display = 'none';
+        return;
+      }
+      area.style.display = 'block';
+      renderCandidateCards('inline');
+    }
+
+    function getDraftByScope(scope) {
+      return scope === 'modal' ? state.modalTweetDraft : state.inlineTweetDraft;
+    }
+
+    function renderCandidateCards(scope) {
+      const draft = getDraftByScope(scope);
+      const containerId = scope === 'modal' ? 'modalTweetCards' : 'tweetDraftCards';
+      const container = document.getElementById(containerId);
+      if (!draft) {
+        container.innerHTML = '';
+        return;
+      }
+
+      const cats = activeCategories();
+      const catOptionsBase = `<option value="${UNASSIGNED_ID}">📥 未分類のまま</option>` +
+        cats.map(c => `<option value="${escAttr(c.category_id)}">${esc(c.cat1)} › ${esc(c.cat2)} › ${esc(c.cat3)}${c.is_food ? ' 🍽️' : ''}</option>`).join('');
+
+      if (!draft.items.length) {
+        container.innerHTML = '<div style="color:var(--muted);font-size:12px;margin-bottom:10px;">候補カードがありません。下のボタンから手動追加できます。</div>';
+      } else {
+        container.innerHTML = draft.items.map((item, idx) => {
+          const reasonHtml = item.reason ? `<div class="cand-reason">🤖 ${esc(item.reason)}</div>` : '';
+
+          if (item.type === 'body') {
+            const existing = state.bodyLogs.find(b => b.date === item.date);
+            const warnHtml = existing
+              ? `<div class="cand-warn">⚠️ ${esc(item.date)} に既に記録（${existing.weight != null ? existing.weight.toFixed(1) + 'kg' : '--'}${existing.body_fat != null ? ' / ' + existing.body_fat.toFixed(1) + '%' : ''}）あり → 登録すると上書きされます</div>`
+              : '';
+            return `
+              <div class="cand-card type-body">
+                <div class="cand-head">
+                  <span class="cand-type-pill body">⚖️ 体重・体脂肪</span>
+                  <button type="button" class="cand-del-btn" onclick="removeCandidateCard('${scope}', ${idx})">× 除外</button>
+                </div>
+                ${reasonHtml}
+                ${warnHtml}
+                <div class="cand-grid-2">
+                  <div class="cand-field">
+                    <label>測定日</label>
+                    <input type="date" value="${escAttr(item.date)}" onchange="updateCandidateField('${scope}', ${idx}, 'date', this.value, true)" />
+                  </div>
+                  <div class="cand-field">
+                    <label>時刻</label>
+                    <input type="time" value="${escAttr(item.time)}" onchange="updateCandidateField('${scope}', ${idx}, 'time', this.value, false)" />
+                  </div>
+                </div>
+                <div class="cand-grid-2">
+                  <div class="cand-field">
+                    <label>体重 (kg) *</label>
+                    <input type="number" step="0.1" inputmode="decimal" value="${item.weight !== '' && item.weight != null ? escAttr(item.weight) : ''}"
+                           placeholder="例: 68.2" oninput="updateCandidateField('${scope}', ${idx}, 'weight', this.value, false)" />
+                  </div>
+                  <div class="cand-field">
+                    <label>体脂肪 (%)</label>
+                    <input type="number" step="0.1" inputmode="decimal" value="${item.body_fat !== '' && item.body_fat != null ? escAttr(item.body_fat) : ''}"
+                           placeholder="空欄可" oninput="updateCandidateField('${scope}', ${idx}, 'body_fat', this.value, false)" />
+                  </div>
+                </div>
+                <div class="cand-field">
+                  <label>メモ（任意）</label>
+                  <input type="text" value="${escAttr(item.memo)}" placeholder="例: 起床後"
+                         oninput="updateCandidateField('${scope}', ${idx}, 'memo', this.value, false)" />
+                </div>
+              </div>
+            `;
+          }
+
+          const selectedCat = cats.find(c => c.category_id === item.category_id);
+          const selVal = selectedCat ? selectedCat.category_id : UNASSIGNED_ID;
+          return `
+            <div class="cand-card type-record">
+              <div class="cand-head">
+                <span class="cand-type-pill record">🏷️ ライフログ</span>
+                <button type="button" class="cand-del-btn" onclick="removeCandidateCard('${scope}', ${idx})">× 除外</button>
+              </div>
+              ${reasonHtml}
+              <div class="cand-field">
+                <label>分類</label>
+                <select onchange="updateCandidateField('${scope}', ${idx}, 'category_id', this.value, true)">
+                  ${catOptionsBase.replace(`value="${escAttr(selVal)}"`, `value="${escAttr(selVal)}" selected`)}
+                </select>
+              </div>
+              <div class="cand-grid-2">
+                <div class="cand-field">
+                  <label>記録日</label>
+                  <input type="date" value="${escAttr(item.date)}" onchange="updateCandidateField('${scope}', ${idx}, 'date', this.value, false)" />
+                </div>
+                <div class="cand-field">
+                  <label>時刻</label>
+                  <input type="time" value="${escAttr(item.time)}" onchange="updateCandidateField('${scope}', ${idx}, 'time', this.value, false)" />
+                </div>
+              </div>
+              <div class="cand-grid-2">
+                <div class="cand-field">
+                  <label>金額 (円)</label>
+                  <input type="number" inputmode="numeric" value="${item.amount !== '' && item.amount != null ? escAttr(item.amount) : ''}"
+                         placeholder="空欄可" oninput="updateCandidateField('${scope}', ${idx}, 'amount', this.value, false)" />
+                </div>
+                <div class="cand-field">
+                  <label>カロリー (kcal)${item.cal_note ? `・${esc(item.cal_note)}` : ''}</label>
+                  <input type="number" inputmode="numeric" value="${item.calories !== '' && item.calories != null ? escAttr(item.calories) : ''}"
+                         placeholder="${selectedCat?.is_food ? '空欄ならAI計算' : '対象外'}"
+                         oninput="updateCandidateField('${scope}', ${idx}, 'calories', this.value, false)" />
+                </div>
+              </div>
+              <div class="cand-field">
+                <label>内容メモ</label>
+                <input type="text" value="${escAttr(item.memo)}" placeholder="内容メモ"
+                       oninput="updateCandidateField('${scope}', ${idx}, 'memo', this.value, false)" />
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      const cnt = draft.items.length;
+      if (scope === 'inline') {
+        document.getElementById('tweetDraftTitle').textContent = `✨ AI解析の候補カード（${cnt}件・確認して登録）`;
+        const btn = document.getElementById('btnCommitDraft');
+        btn.textContent = `まとめて登録する（${cnt}件）`;
+        btn.disabled = cnt === 0;
+      } else {
+        const btn = document.getElementById('btnTweetReviewCommit');
+        btn.textContent = `まとめて本登録する（${cnt}件）`;
+        btn.disabled = cnt === 0;
+      }
+    }
+
+    function updateCandidateField(scope, idx, field, value, rerender) {
+      const draft = getDraftByScope(scope);
+      if (!draft || !draft.items[idx]) return;
+      draft.items[idx][field] = value;
+      if (rerender) renderCandidateCards(scope);
+    }
+
+    function removeCandidateCard(scope, idx) {
+      const draft = getDraftByScope(scope);
+      if (!draft) return;
+      draft.items.splice(idx, 1);
+      renderCandidateCards(scope);
+    }
+
+    function addCandidateCard(scope, type) {
+      const draft = getDraftByScope(scope);
+      if (!draft) return;
+      const dt = extractDateAndTime({ date: draft.date, timestamp: draft.timestamp });
+      const d = dt.date || formatDateJst(new Date());
+      const t = dt.time || '12:00';
+      if (type === 'body') {
+        draft.items.push({ type: 'body', date: d, time: t, weight: '', body_fat: '', memo: '', reason: '' });
+      } else {
+        draft.items.push({ type: 'record', date: d, time: t, category_id: UNASSIGNED_ID, amount: '', calories: '', cal_note: '', memo: '', reason: '' });
+      }
+      renderCandidateCards(scope);
+    }
+
+    function buildCommitPayloadFromDraft(draft) {
+      if (!draft || !draft.items.length) {
+        toast('登録する候補カードがありません');
+        return null;
+      }
+
+      const isMobile = /iPhone|Android/i.test(navigator.userAgent);
+      const device = isMobile ? 'mobile' : 'pc';
+      const catMap = Object.fromEntries(state.categories.map(c => [c.category_id, c]));
+
+      const recordsToAdd = [];
+      const bodyLogsToUpsert = [];
+      const normalizedSummary = [];
+
+      for (let i = 0; i < draft.items.length; i++) {
+        const it = draft.items[i];
+        const dStr = it.date || draft.date || formatDateJst(new Date());
+        const tStr = it.time || '00:00';
+        const tsStr = `${dStr} ${tStr}:00`;
+        const memo = String(it.memo || '').trim();
+
+        if (it.type === 'body') {
+          const wRaw = String(it.weight ?? '').trim();
+          if (wRaw === '') {
+            toast(`${i + 1}番目のカード：体重を入力してください`);
+            return null;
+          }
+          const weight = Math.round(Number(wRaw) * 10) / 10;
+          if (isNaN(weight) || weight <= 0 || weight >= 500) {
+            toast(`${i + 1}番目のカード：体重を正しい数値で入力してください`);
+            return null;
+          }
+          let bodyFat = null;
+          const fRaw = String(it.body_fat ?? '').trim();
+          if (fRaw !== '') {
+            bodyFat = Math.round(Number(fRaw) * 10) / 10;
+            if (isNaN(bodyFat) || bodyFat < 0 || bodyFat > 100) {
+              toast(`${i + 1}番目のカード：体脂肪率は0〜100で入力してください`);
+              return null;
+            }
+          }
+
+          const existing = state.bodyLogs.find(b => b.date === dStr);
+          const bLog = {
+            log_id: existing ? existing.log_id : newClientId('b'),
+            timestamp: tsStr,
+            date: dStr,
+            weight,
+            body_fat: bodyFat,
+            memo,
+            device,
+            _unsynced: true
+          };
+          bodyLogsToUpsert.push(bLog);
+          normalizedSummary.push({ type: 'body', date: dStr, time: tStr, weight, body_fat: bodyFat, memo });
+        } else {
+          const amtRaw = String(it.amount ?? '').trim();
+          const calRaw = String(it.calories ?? '').trim();
+          const amount = amtRaw !== '' ? Math.round(Number(amtRaw)) : null;
+          const rawCatId = String(it.category_id || UNASSIGNED_ID).trim();
+          const isUnassigned = !rawCatId || rawCatId === UNASSIGNED_ID;
+          const cat = isUnassigned ? null : catMap[rawCatId];
+
+          let calories = calRaw !== '' ? Math.max(0, Math.round(Number(calRaw))) : null;
+          if (calories === null && cat && cat.is_food && cat.fixed_kcal != null) {
+            calories = Math.round(Number(cat.fixed_kcal));
+          }
+
+          if (!memo && amount === null && calories === null) {
+            toast(`${i + 1}番目のカード：メモ・金額・カロリーのいずれかを入力してください`);
+            return null;
+          }
+
+          let calStatus = 'NONE';
+          let calNote = String(it.cal_note || '').trim();
+          if (calories !== null) {
+            calStatus = calNote ? 'DONE' : 'FIXED';
+          } else if (cat && cat.is_food && memo) {
+            calStatus = 'PENDING';
+            calNote = '';
+          }
+
+          const rec = {
+            record_id: newClientId('r'),
+            timestamp: tsStr,
+            date: dStr,
+            category_id: isUnassigned ? UNASSIGNED_ID : cat.category_id,
+            cat1: isUnassigned ? '未分類' : cat.cat1,
+            cat2: isUnassigned ? '未分類' : cat.cat2,
+            cat3: isUnassigned ? '未分類' : cat.cat3,
+            amount,
+            memo,
+            calories,
+            cal_status: calStatus,
+            cal_note: calNote,
+            device,
+            ai_cat_id: '',
+            ai_cat_status: isUnassigned ? 'PENDING' : 'NONE',
+            ai_cat_note: '',
+            _unsynced: true
+          };
+          recordsToAdd.push(rec);
+          normalizedSummary.push({
+            type: 'record', date: dStr, time: tStr,
+            category_id: rec.category_id, amount, calories, cal_note: calNote, memo
+          });
+        }
+      }
+
+      return {
+        tweet_id: draft.tweet_id,
+        raw_text: draft.raw_text,
+        timestamp: draft.timestamp,
+        date: draft.date,
+        parsed_items: normalizedSummary,
+        device,
+        records: recordsToAdd,
+        body_logs: bodyLogsToUpsert
+      };
+    }
+
+    async function executeTweetCommit(payload) {
+      // 1. ローカルの records / bodyLogs / tweetInbox を即時更新
+      payload.records.forEach(r => state.records.push(r));
+      payload.body_logs.forEach(b => {
+        state.bodyLogs = state.bodyLogs.filter(x => x.log_id !== b.log_id && x.date !== b.date);
+        state.bodyLogs.push(b);
+      });
+
+      const existTweet = state.tweetInbox.find(t => t.tweet_id === payload.tweet_id);
+      if (existTweet) {
+        existTweet.status = 'DONE';
+        existTweet.parsed_items = payload.parsed_items;
+        existTweet.error_note = '';
+        existTweet._unsynced = true;
+      } else {
+        state.tweetInbox.unshift({
+          tweet_id: payload.tweet_id,
+          timestamp: payload.timestamp,
+          date: payload.date,
+          raw_text: payload.raw_text,
+          status: 'DONE',
+          parsed_items: payload.parsed_items,
+          error_note: '',
+          device: payload.device,
+          _unsynced: true
+        });
+      }
+
+      // 同じ tweet_id が未送信追加キューにあれば除去（complete_tweet 側で DONE 作成まで完結）
+      state.tweetAddQueue = state.tweetAddQueue.filter(q => q.tweet_id !== payload.tweet_id);
+      state.tweetDeleteQueue = state.tweetDeleteQueue.filter(id => id !== payload.tweet_id);
+      state.tweetCompleteQueue = state.tweetCompleteQueue.filter(q => q.tweet_id !== payload.tweet_id);
+      state.tweetCompleteQueue.push(payload);
+
+      persistLocal();
+      renderRecentTweetList();
+      renderRecentList();
+      renderRecentBodyList();
+      updateBodyInputContext();
+      renderHistoryView();
+      renderBodyHistoryView();
+      renderTweetHistoryView();
+      updateUnassignedIndicators();
+      updateSyncBadge();
+
+      const synced = await flushTweetCompleteQueue();
+      return synced;
+    }
+
+    async function commitInlineTweetDraft() {
+      const payload = buildCommitPayloadFromDraft(state.inlineTweetDraft);
+      if (!payload) return;
+
+      const totalCnt = payload.records.length + payload.body_logs.length;
+      document.getElementById('inpTweetText').value = '';
+      clearInlineTweetDraft();
+      if (state.useTweetCustomDateTime) toggleTweetCustomDateTime(true);
+
+      const synced = await executeTweetCommit(payload);
+      toast(synced ? `${totalCnt}件を登録しました（つぶやき履歴にも保存）` : `${totalCnt}件を端末に登録しました（次回同期で反映）`);
+    }
+
+    // 確認待ちつぶやきモーダル
+    function openFirstReadyTweet() {
+      const list = getReadyTweetsSorted();
+      if (!list.length) return toast('確認待ちのつぶやきはありません');
+      openTweetReviewModal(list[0].tweet_id);
+    }
+
+    function openTweetReviewModal(tweetId) {
+      const t = state.tweetInbox.find(x => x.tweet_id === tweetId);
+      if (!t) return;
+
+      const items = normalizeCandidateList(
+        (t.parsed_items && t.parsed_items.length)
+          ? t.parsed_items
+          : [{ type: 'record', date: t.date, time: extractDateAndTime(t).time || '12:00', category_id: UNASSIGNED_ID, memo: t.raw_text }],
+        t.date,
+        t.timestamp
+      );
+
+      state.modalTweetDraft = {
+        tweet_id: t.tweet_id,
+        raw_text: t.raw_text,
+        timestamp: t.timestamp,
+        date: t.date,
+        items
+      };
+
+      const otherReady = getReadyTweetsSorted().filter(x => x.tweet_id !== tweetId);
+      document.getElementById('reviewTweetId').value = t.tweet_id;
+      document.getElementById('tweetReviewTitle').textContent =
+        t.status === 'READY'
+          ? `✨ 確認待ちのつぶやき（残り ${otherReady.length + 1}件）`
+          : '✨ つぶやきを手動確認・登録';
+      document.getElementById('reviewTweetMeta').textContent = `🕒 ${formatDateTime(t)}`;
+      document.getElementById('reviewTweetRawText').textContent = t.raw_text;
+
+      const nextBtn = document.getElementById('btnTweetReviewNext');
+      if (otherReady.length > 0) {
+        nextBtn.style.display = 'block';
+        nextBtn.textContent = `登録して次の確認待ちへ（あと${otherReady.length}件）`;
+      } else {
+        nextBtn.style.display = 'none';
+      }
+
+      renderCandidateCards('modal');
+      document.getElementById('tweetReviewModal').classList.add('open');
+    }
+
+    function closeTweetReviewModal() {
+      state.modalTweetDraft = null;
+      document.getElementById('tweetReviewModal').classList.remove('open');
+    }
+
+    async function commitModalTweetReview(goNext) {
+      const payload = buildCommitPayloadFromDraft(state.modalTweetDraft);
+      if (!payload) return;
+
+      const totalCnt = payload.records.length + payload.body_logs.length;
+      const nextList = goNext ? getReadyTweetsSorted().filter(x => x.tweet_id !== payload.tweet_id) : [];
+
+      if (goNext && nextList.length > 0) {
+        executeTweetCommit(payload);
+        openTweetReviewModal(nextList[0].tweet_id);
+        toast(`${totalCnt}件を登録しました（残り ${nextList.length}件）`);
+      } else {
+        closeTweetReviewModal();
+        const synced = await executeTweetCommit(payload);
+        if (goNext) {
+          toast('すべての確認待ちつぶやきを登録しました！');
+        } else {
+          toast(synced ? `${totalCnt}件を本登録しました` : `${totalCnt}件を端末に反映しました（次回同期で反映）`);
+        }
+      }
+    }
+
+    async function discardReviewingTweet() {
+      const id = document.getElementById('reviewTweetId').value;
+      if (!id) return;
+      const deleted = await deleteTweetItem(id);
+      if (deleted) closeTweetReviewModal();
+    }
+
+    async function parseInboxTweetNow(tweetId) {
+      if (!state.settings.gasUrl || !state.settings.token) {
+        return toast('設定タブでGAS URLとトークンを設定してください');
+      }
+      if (!navigator.onLine) return toast('オフラインのためAI解析できません');
+
+      toast('AIで分解しています...');
+      await flushTweetAddQueue();
+
+      try {
+        const res = await postGas({ action: 'parse_tweet_inbox_item', tweet_id: tweetId });
+        if (res.tweet) {
+          const idx = state.tweetInbox.findIndex(x => x.tweet_id === tweetId);
+          if (idx >= 0) state.tweetInbox[idx] = res.tweet;
+          else state.tweetInbox.unshift(res.tweet);
+          persistLocal();
+          renderRecentTweetList();
+          renderTweetHistoryView();
+          updateUnassignedIndicators();
+          openTweetReviewModal(tweetId);
+        }
+      } catch (err) {
+        toast('AI解析失敗: ' + err.message);
+      }
+    }
+
+    async function deleteTweetItem(tweetId) {
+      const t = state.tweetInbox.find(x => x.tweet_id === tweetId);
+      if (!t) return false;
+      const preview = t.raw_text.length > 60 ? t.raw_text.slice(0, 60) + '…' : t.raw_text;
+      if (!confirm(`このつぶやきを削除しますか？\n\n「${preview}」`)) return false;
+
+      state.tweetInbox = state.tweetInbox.filter(x => x.tweet_id !== tweetId);
+      const wasUnsyncedOnly = state.tweetAddQueue.some(q => q.tweet_id === tweetId);
+      state.tweetAddQueue = state.tweetAddQueue.filter(q => q.tweet_id !== tweetId);
+      state.tweetCompleteQueue = state.tweetCompleteQueue.filter(q => q.tweet_id !== tweetId);
+
+      if (!wasUnsyncedOnly && !state.tweetDeleteQueue.includes(tweetId)) {
+        state.tweetDeleteQueue.push(tweetId);
+      }
+
+      persistLocal();
+      renderRecentTweetList();
+      renderTweetHistoryView();
+      updateUnassignedIndicators();
+      updateSyncBadge();
+
+      if (!wasUnsyncedOnly) {
+        await flushTweetDeleteQueue();
+      }
+      toast('つぶやきを削除しました');
+      return true;
+    }
+
+    function renderTweetRowHtml(t) {
+      const badges = [];
+      if (t.status === 'READY') badges.push('<span class="badge badge-ready">✨ 確認待ち</span>');
+      else if (t.status === 'PENDING') badges.push('<span class="badge badge-ai">⏳ AI解析待ち</span>');
+      else if (t.status === 'ERROR') badges.push('<span class="badge badge-err">⚠️ 解析エラー</span>');
+      else badges.push('<span class="badge badge-ok">✓ 登録済</span>');
+
+      if (t._unsynced) badges.push('<span class="badge badge-off">未同期</span>');
+      if (t.parsed_items && t.parsed_items.length) {
+        badges.push(`<span class="badge">${t.parsed_items.length}件に分解</span>`);
+      }
+
+      const actions = [];
+      if (t.status === 'READY') {
+        actions.push(`<button class="btn-approve-mini" onclick="openTweetReviewModal('${escAttr(t.tweet_id)}')">確認して登録</button>`);
+      } else if (t.status === 'PENDING' || t.status === 'ERROR') {
+        actions.push(`<button class="btn-ai-mini" onclick="parseInboxTweetNow('${escAttr(t.tweet_id)}')">✨ 今すぐ解析</button>`);
+        actions.push(`<button class="btn-edit-mini" onclick="openTweetReviewModal('${escAttr(t.tweet_id)}')">手動登録</button>`);
+      }
+      actions.push(`<button class="btn-del-mini" onclick="deleteTweetItem('${escAttr(t.tweet_id)}')">削除</button>`);
+
+      return `
+        <div class="list-item" style="align-items:flex-start;">
+          <div style="min-width:0; flex:1;">
+            <div>${badges.join('')}</div>
+            <div style="margin-top:4px; white-space:pre-wrap; word-break:break-word; line-height:1.45;">${esc(t.raw_text)}</div>
+            <div style="font-size:11px; color:var(--muted); margin-top:3px;">
+              ${esc(formatDateTime(t))}${t.error_note ? ' ・ ' + esc(t.error_note) : ''}
+            </div>
+            <div class="item-actions" style="justify-content:flex-start; margin-top:6px;">
+              ${actions.join('')}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderRecentTweetList() {
+      const listEl = document.getElementById('recentTweetList');
+      const openOrder = { READY: 0, ERROR: 1, PENDING: 2, DONE: 3 };
+      const sorted = [...state.tweetInbox].sort((a, b) => {
+        const oa = openOrder[a.status] ?? 9;
+        const ob = openOrder[b.status] ?? 9;
+        if (oa !== ob) return oa - ob;
+        return toSortMillis(b) - toSortMillis(a);
+      }).slice(0, 10);
+
+      if (!sorted.length) {
+        listEl.innerHTML = '<div style="color:var(--muted);font-size:13px;">まだつぶやき履歴がありません</div>';
+        return;
+      }
+      listEl.innerHTML = sorted.map(renderTweetRowHtml).join('');
+    }
+
+    function onTweetHistoryFilterChange() {
+      state.histTweetFilter.status = document.getElementById('histTweetStatus').value;
+      state.histTweetFilter.keyword = document.getElementById('histTweetKeyword').value.trim();
+      renderTweetHistoryView();
+    }
+
+    function resetTweetHistoryFilter() {
+      state.histTweetFilter = { status: 'all', keyword: '' };
+      document.getElementById('histTweetStatus').value = 'all';
+      document.getElementById('histTweetKeyword').value = '';
+      renderTweetHistoryView();
+    }
+
+    function renderTweetHistoryView() {
+      const f = state.histTweetFilter;
+      document.getElementById('histTweetStatus').value = f.status;
+      if (document.getElementById('histTweetKeyword').value !== f.keyword) {
+        document.getElementById('histTweetKeyword').value = f.keyword;
+      }
+
+      const cntReady = state.tweetInbox.filter(t => t.status === 'READY').length;
+      const cntPending = state.tweetInbox.filter(t => t.status === 'PENDING' || t.status === 'ERROR').length;
+      const cntDone = state.tweetInbox.filter(t => t.status === 'DONE').length;
+      document.getElementById('histTweetCntReady').textContent = `${cntReady} 件`;
+      document.getElementById('histTweetCntPending').textContent = `${cntPending} 件`;
+      document.getElementById('histTweetCntDone').textContent = `${cntDone} 件`;
+
+      const kw = (f.keyword || '').toLowerCase();
+      const filtered = state.tweetInbox
+        .filter(t => {
+          if (f.status === 'OPEN' && t.status === 'DONE') return false;
+          if (f.status === 'READY' && t.status !== 'READY') return false;
+          if (f.status === 'DONE' && t.status !== 'DONE') return false;
+          if (kw && !`${t.raw_text || ''} ${t.date || ''}`.toLowerCase().includes(kw)) return false;
+          return true;
+        })
+        .sort((a, b) => toSortMillis(b) - toSortMillis(a));
+
+      document.getElementById('histTweetListTitle').textContent = `✨ つぶやき一覧（${filtered.length} 件）`;
+      const listEl = document.getElementById('historyTweetList');
+      if (!filtered.length) {
+        listEl.innerHTML = '<div style="color:var(--muted);font-size:13px;">条件に一致するつぶやきがありません</div>';
+      } else {
+        listEl.innerHTML = filtered.map(renderTweetRowHtml).join('');
+      }
+    }
+
+    // ====== 1-C. ⚖️ 体重・体脂肪 入力・1日1件上書き・編集・削除 ======
+    function getBodyLogsSortedAsc() {
+      return [...state.bodyLogs].sort((a, b) => {
+        if (a.date !== b.date) return a.date.localeCompare(b.date);
+        return toSortMillis(a) - toSortMillis(b);
+      });
+    }
+
+    function getBodyLogsSortedDesc() {
+      return [...state.bodyLogs].sort((a, b) => {
+        if (a.date !== b.date) return b.date.localeCompare(a.date);
+        return toSortMillis(b) - toSortMillis(a);
+      });
+    }
+
+    function getTargetBodyDateStr() {
+      if (state.useBodyCustomDateTime) {
+        return document.getElementById('inpBodyDate').value || formatDateJst(new Date());
+      }
+      return formatDateJst(new Date());
+    }
+
+    function toggleBodyCustomDateTime(forceOff = false) {
+      state.useBodyCustomDateTime = forceOff ? false : !state.useBodyCustomDateTime;
+      const fields = document.getElementById('inpBodyDtFields');
+      const btn = document.getElementById('inpBodyDtToggleBtn');
+      if (state.useBodyCustomDateTime) {
+        const now = new Date();
+        document.getElementById('inpBodyDate').value = formatDateJst(now);
+        document.getElementById('inpBodyTime').value =
+          `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        fields.classList.add('open');
+        btn.textContent = '現在時刻に戻す';
+        onBodyCustomDtChange();
+      } else {
+        fields.classList.remove('open');
+        btn.textContent = '日時を指定';
+        document.getElementById('inpBodyDtStatus').textContent = '現在時刻（自動）';
+        updateBodyInputContext();
+      }
+    }
+
+    function onBodyCustomDtChange() {
+      if (state.useBodyCustomDateTime) {
+        const d = document.getElementById('inpBodyDate').value;
+        const t = document.getElementById('inpBodyTime').value || '00:00';
+        document.getElementById('inpBodyDtStatus').textContent = d ? `${d} ${t}` : '日付を選択';
+      }
+      updateBodyInputContext();
+    }
+
+    function updateBodyInputContext() {
+      const sortedDesc = getBodyLogsSortedDesc();
+      const targetDate = getTargetBodyDateStr();
+      const existingSameDay = state.bodyLogs.find(b => b.date === targetDate);
+
+      const prevWeightLog = sortedDesc.find(b => b.weight != null && b.date !== targetDate) || sortedDesc.find(b => b.weight != null);
+      const prevFatLog = sortedDesc.find(b => b.body_fat != null && b.date !== targetDate) || sortedDesc.find(b => b.body_fat != null);
+
+      const wInp = document.getElementById('inpBodyWeight');
+      const fInp = document.getElementById('inpBodyFat');
+      const wHint = document.getElementById('bodyWeightHint');
+      const fHint = document.getElementById('bodyFatHint');
+
+      if (prevWeightLog) {
+        const md = prevWeightLog.date.slice(5).replace('-', '/');
+        wHint.textContent = `前回: ${prevWeightLog.weight.toFixed(1)}kg (${md})`;
+        wInp.placeholder = `前回: ${prevWeightLog.weight.toFixed(1)}`;
+      } else {
+        wHint.textContent = '';
+        wInp.placeholder = '例: 68.4';
+      }
+
+      if (prevFatLog) {
+        fHint.textContent = `前回: ${prevFatLog.body_fat.toFixed(1)}%`;
+        fInp.placeholder = `前回: ${prevFatLog.body_fat.toFixed(1)}`;
+      } else {
+        fHint.textContent = '';
+        fInp.placeholder = '空欄OK';
+      }
+
+      const banner = document.getElementById('bodyOverwriteBanner');
+      const bannerTxt = document.getElementById('bodyOverwriteText');
+      const submitBtn = document.getElementById('btnSubmitBody');
+
+      if (existingSameDay) {
+        const curW = existingSameDay.weight != null ? `${existingSameDay.weight.toFixed(1)}kg` : '--';
+        const curF = existingSameDay.body_fat != null ? ` / ${existingSameDay.body_fat.toFixed(1)}%` : '';
+        bannerTxt.innerHTML = `📝 <strong>${esc(targetDate)}</strong> の記録（${curW}${curF}）あり → 保存すると上書きします`;
+        banner.classList.add('show');
+        submitBtn.textContent = `${targetDate} の記録を上書き保存`;
+        submitBtn.className = 'btn btn-warn';
+      } else {
+        banner.classList.remove('show');
+        submitBtn.textContent = '体重・体脂肪を記録する';
+        submitBtn.className = 'btn btn-teal';
+      }
+    }
+
+    function loadExistingBodyForDate() {
+      const targetDate = getTargetBodyDateStr();
+      const existing = state.bodyLogs.find(b => b.date === targetDate);
+      if (!existing) return;
+      document.getElementById('inpBodyWeight').value = existing.weight != null ? existing.weight : '';
+      document.getElementById('inpBodyFat').value = existing.body_fat != null ? existing.body_fat : '';
+      document.getElementById('inpBodyMemo').value = existing.memo || '';
+      toast(`${targetDate} の記録を読み込みました`);
+    }
+
+    function submitBodyLog() {
+      const wRaw = document.getElementById('inpBodyWeight').value.trim();
+      const fRaw = document.getElementById('inpBodyFat').value.trim();
+      const memo = document.getElementById('inpBodyMemo').value.trim();
+
+      if (wRaw === '') return toast('体重を入力してください');
+      const weight = Math.round(Number(wRaw) * 10) / 10;
+      if (isNaN(weight) || weight <= 0 || weight >= 500) {
+        return toast('体重を正しい数値で入力してください');
+      }
+
+      let bodyFat = null;
+      if (fRaw !== '') {
+        bodyFat = Math.round(Number(fRaw) * 10) / 10;
+        if (isNaN(bodyFat) || bodyFat < 0 || bodyFat > 100) {
+          return toast('体脂肪率を0〜100の間で入力してください');
+        }
+      }
+
+      let dateStr;
+      let timestampStr;
+      if (state.useBodyCustomDateTime) {
+        const customDate = document.getElementById('inpBodyDate').value;
+        const customTime = document.getElementById('inpBodyTime').value || '00:00';
+        if (!customDate) return toast('測定日を選択してください');
+        dateStr = customDate;
+        timestampStr = `${customDate} ${customTime}:00`;
+      } else {
+        const now = new Date();
+        dateStr = formatDateJst(now);
+        timestampStr = now.toISOString();
+      }
+
+      const existing = state.bodyLogs.find(b => b.date === dateStr);
+      const isOverwrite = Boolean(existing);
+      const isMobile = /iPhone|Android/i.test(navigator.userAgent);
+
+      const log = {
+        log_id: existing ? existing.log_id : newClientId('b'),
+        timestamp: timestampStr,
+        date: dateStr,
+        weight,
+        body_fat: bodyFat,
+        memo,
+        device: isMobile ? 'mobile' : 'pc',
+        _unsynced: true
+      };
+
+      upsertLocalBodyLog(log);
+
+      document.getElementById('inpBodyWeight').value = '';
+      document.getElementById('inpBodyFat').value = '';
+      document.getElementById('inpBodyMemo').value = '';
+      if (state.useBodyCustomDateTime) toggleBodyCustomDateTime(true);
+
+      updateBodyInputContext();
+      renderRecentBodyList();
+      renderBodyHistoryView();
+      updateSyncBadge();
+
+      toast(isOverwrite ? `${dateStr} の体重・体脂肪を上書きしました` : '体重・体脂肪を記録しました');
+      flushBodyUpsertQueue();
+    }
+
+    function upsertLocalBodyLog(log) {
+      state.bodyLogs = state.bodyLogs.filter(b => b.log_id !== log.log_id && b.date !== log.date);
+      state.bodyLogs.push(log);
+
+      state.bodyDeleteQueue = state.bodyDeleteQueue.filter(id => id !== log.log_id);
+      state.bodyUpsertQueue = state.bodyUpsertQueue.filter(q => q.log_id !== log.log_id && q.date !== log.date);
+      state.bodyUpsertQueue.push({
+        log_id: log.log_id,
+        timestamp: log.timestamp,
+        date: log.date,
+        weight: log.weight,
+        body_fat: log.body_fat,
+        memo: log.memo,
+        device: log.device
+      });
+
+      persistLocal();
+    }
+
+    function buildPrevBodyWeightMap() {
+      const asc = getBodyLogsSortedAsc();
+      const prevMap = new Map();
+      let prevWeight = null;
+      asc.forEach(b => {
+        prevMap.set(b.log_id, prevWeight);
+        if (b.weight != null) prevWeight = b.weight;
+      });
+      return prevMap;
+    }
+
+    function formatWeightDeltaBadge(curWeight, prevWeight) {
+      if (curWeight == null || prevWeight == null) return '';
+      const diff = Math.round((curWeight - prevWeight) * 10) / 10;
+      if (diff === 0) return '<span class="delta-pill delta-flat">±0.0kg</span>';
+      if (diff < 0) return `<span class="delta-pill delta-down">${diff.toFixed(1)}kg</span>`;
+      return `<span class="delta-pill delta-up">+${diff.toFixed(1)}kg</span>`;
+    }
+
+    function renderBodyLogRowHtml(b, prevMap) {
+      const prevW = prevMap.get(b.log_id);
+      const deltaHtml = formatWeightDeltaBadge(b.weight, prevW);
+      const weightText = b.weight != null ? `${b.weight.toFixed(1)} kg` : '-- kg';
+      const fatText = b.body_fat != null ? `${b.body_fat.toFixed(1)} %` : '';
+      const unsyncedBadge = b._unsynced ? '<span class="badge badge-off">未同期</span>' : '';
+
+      return `
+        <div class="list-item" style="align-items:flex-start;">
+          <div style="min-width:0; flex:1;">
+            <div style="display:flex; align-items:center; flex-wrap:wrap; gap:4px;">
+              <span class="badge badge-teal">⚖️ ${esc(b.date)}</span>
+              ${unsyncedBadge}
+            </div>
+            <div style="margin-top:4px; font-size:15px; font-weight:800;">
+              ${weightText}${deltaHtml}
+              ${fatText ? `<span style="font-size:13px; font-weight:700; color:#7c3aed; margin-left:8px;">体脂肪 ${fatText}</span>` : ''}
+            </div>
+            ${b.memo ? `<div style="margin-top:3px; word-break:break-word; color:var(--text);">${esc(b.memo)}</div>` : ''}
+            <div style="font-size:11px; color:var(--muted); margin-top:2px;">${esc(formatDateTime(b))}</div>
+          </div>
+          <div style="text-align:right; white-space:nowrap;">
+            <div class="item-actions" style="margin-top:2px;">
+              <button class="btn-edit-mini" onclick="openEditBodyModal('${escAttr(b.log_id)}')">編集</button>
+              <button class="btn-del-mini" onclick="deleteBodyLog('${escAttr(b.log_id)}')">削除</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderRecentBodyList() {
+      const listEl = document.getElementById('recentBodyList');
+      const items = getBodyLogsSortedDesc().slice(0, 10);
+      if (!items.length) {
+        listEl.innerHTML = '<div style="color:var(--muted);font-size:13px;">まだ体重・体脂肪の記録がありません</div>';
+        return;
+      }
+      const prevMap = buildPrevBodyWeightMap();
+      listEl.innerHTML = items.map(b => renderBodyLogRowHtml(b, prevMap)).join('');
+    }
+
+    function openEditBodyModal(logId) {
+      const b = state.bodyLogs.find(x => x.log_id === logId);
+      if (!b) return;
+      const dt = extractDateAndTime(b);
+      document.getElementById('editBodyLogId').value = b.log_id;
+      document.getElementById('editBodyDate').value = dt.date || b.date || formatDateJst(new Date());
+      document.getElementById('editBodyTime').value = dt.time || '07:00';
+      document.getElementById('editBodyWeight').value = b.weight != null ? b.weight : '';
+      document.getElementById('editBodyFat').value = b.body_fat != null ? b.body_fat : '';
+      document.getElementById('editBodyMemo').value = b.memo || '';
+      document.getElementById('editBodyModal').classList.add('open');
+    }
+
+    function closeEditBodyModal() {
+      document.getElementById('editBodyModal').classList.remove('open');
+    }
+
+    async function saveEditedBodyLog() {
+      const logId = document.getElementById('editBodyLogId').value;
+      const orig = state.bodyLogs.find(x => x.log_id === logId);
+      if (!orig) return closeEditBodyModal();
+
+      const newDate = document.getElementById('editBodyDate').value;
+      const newTime = document.getElementById('editBodyTime').value || '00:00';
+      const wRaw = document.getElementById('editBodyWeight').value.trim();
+      const fRaw = document.getElementById('editBodyFat').value.trim();
+      const memo = document.getElementById('editBodyMemo').value.trim();
+
+      if (!newDate) return toast('記録日を入力してください');
+      if (wRaw === '') return toast('体重を入力してください');
+      const weight = Math.round(Number(wRaw) * 10) / 10;
+      if (isNaN(weight) || weight <= 0 || weight >= 500) return toast('体重を正しく入力してください');
+
+      let bodyFat = null;
+      if (fRaw !== '') {
+        bodyFat = Math.round(Number(fRaw) * 10) / 10;
+        if (isNaN(bodyFat) || bodyFat < 0 || bodyFat > 100) return toast('体脂肪率は0〜100で入力してください');
+      }
+
+      const conflict = state.bodyLogs.find(x => x.date === newDate && x.log_id !== logId);
+      if (conflict) {
+        const cText = `${conflict.weight != null ? conflict.weight.toFixed(1) + 'kg' : '--'}${conflict.body_fat != null ? ' / ' + conflict.body_fat.toFixed(1) + '%' : ''}`;
+        if (!confirm(`${newDate} には既に別の記録（${cText}）があります。\nこの内容で上書き統合しますか？`)) {
+          return;
+        }
+      }
+
+      const updated = {
+        log_id: logId,
+        timestamp: `${newDate} ${newTime}:00`,
+        date: newDate,
+        weight,
+        body_fat: bodyFat,
+        memo,
+        device: orig.device || 'web',
+        _unsynced: true
+      };
+
+      closeEditBodyModal();
+      upsertLocalBodyLog(updated);
+
+      updateBodyInputContext();
+      renderRecentBodyList();
+      renderBodyHistoryView();
+      updateSyncBadge();
+
+      const synced = await flushBodyUpsertQueue();
+      toast(synced ? '体重・体脂肪を更新しました' : '端末に反映しました（次回同期時にシートへ反映）');
+    }
+
+    async function deleteBodyLog(logId) {
+      const b = state.bodyLogs.find(x => x.log_id === logId);
+      if (!b) return;
+
+      const summary = [
+        `${formatDateTime(b)}`,
+        `体重: ${b.weight != null ? b.weight.toFixed(1) + 'kg' : '--'}${b.body_fat != null ? ` / 体脂肪: ${b.body_fat.toFixed(1)}%` : ''}`,
+        b.memo ? b.memo : ''
+      ].filter(Boolean).join('\n');
+
+      if (!confirm(`この体重・体脂肪の記録を削除しますか？\n\n${summary}`)) return;
+
+      state.bodyLogs = state.bodyLogs.filter(x => x.log_id !== logId);
+      state.bodyUpsertQueue = state.bodyUpsertQueue.filter(q => q.log_id !== logId);
+      if (!state.bodyDeleteQueue.includes(logId)) {
+        state.bodyDeleteQueue.push(logId);
+      }
+
+      persistLocal();
+      updateBodyInputContext();
+      renderRecentBodyList();
+      renderBodyHistoryView();
+      updateSyncBadge();
+
+      const synced = await flushBodyDeleteQueue();
+      toast(synced ? '記録を削除しました' : '端末から削除しました（次回同期時にシートへ反映）');
+    }
+
+    function onBodyHistoryFilterChange() {
+      state.histBodyFilter.period = document.getElementById('histBodyPeriod').value;
+      state.histBodyFilter.keyword = document.getElementById('histBodyKeyword').value.trim();
+      state.histBodyLimit = 50;
+      renderBodyHistoryView();
+    }
+
+    function resetBodyHistoryFilter() {
+      state.histBodyFilter = { period: 'all', keyword: '' };
+      state.histBodyLimit = 50;
+      document.getElementById('histBodyPeriod').value = 'all';
+      document.getElementById('histBodyKeyword').value = '';
+      renderBodyHistoryView();
+    }
+
+    function loadMoreBodyHistory() {
+      state.histBodyLimit += 50;
+      renderBodyHistoryView();
+    }
+
+    function renderBodyHistoryView() {
+      const f = state.histBodyFilter;
+      document.getElementById('histBodyPeriod').value = f.period;
+      if (document.getElementById('histBodyKeyword').value !== f.keyword) {
+        document.getElementById('histBodyKeyword').value = f.keyword;
+      }
+
+      const { startDate, endDate } = getPeriodDateRange(f.period);
+      const kw = (f.keyword || '').toLowerCase();
+
+      const filtered = getBodyLogsSortedDesc().filter(b => {
+        if (startDate && b.date < startDate) return false;
+        if (endDate && b.date > endDate) return false;
+        if (kw && !`${b.memo || ''} ${b.date || ''}`.toLowerCase().includes(kw)) return false;
+        return true;
+      });
+
+      const weights = filtered.map(b => b.weight).filter(v => v != null);
+      const fats = filtered.map(b => b.body_fat).filter(v => v != null);
+
+      const avgW = weights.length ? (weights.reduce((a, v) => a + v, 0) / weights.length) : null;
+      const avgF = fats.length ? (fats.reduce((a, v) => a + v, 0) / fats.length) : null;
+
+      document.getElementById('histBodyAvgWeight').textContent = avgW != null ? `${avgW.toFixed(1)} kg` : '-- kg';
+      document.getElementById('histBodyAvgFat').textContent = avgF != null ? `${avgF.toFixed(1)} %` : '-- %';
+
+      const deltaEl = document.getElementById('histBodyDelta');
+      if (weights.length >= 2) {
+        const diff = Math.round((weights[0] - weights[weights.length - 1]) * 10) / 10;
+        const sign = diff > 0 ? '+' : (diff === 0 ? '±' : '');
+        deltaEl.textContent = `${sign}${diff.toFixed(1)} kg`;
+        deltaEl.style.color = diff < 0 ? 'var(--success)' : (diff > 0 ? 'var(--danger)' : 'var(--text)');
+      } else {
+        deltaEl.textContent = '--';
+        deltaEl.style.color = 'var(--text)';
+      }
+
+      const shown = filtered.slice(0, state.histBodyLimit);
+      document.getElementById('histBodyListTitle').textContent =
+        filtered.length > shown.length
+          ? `⚖️ 体重・体脂肪一覧（${shown.length} / ${filtered.length} 件表示）`
+          : `⚖️ 体重・体脂肪一覧（${filtered.length} 件）`;
+
+      const listEl = document.getElementById('historyBodyList');
+      if (!filtered.length) {
+        listEl.innerHTML = '<div style="color:var(--muted);font-size:13px;">条件に一致する記録がありません</div>';
+      } else {
+        const prevMap = buildPrevBodyWeightMap();
+        listEl.innerHTML = shown.map(b => renderBodyLogRowHtml(b, prevMap)).join('');
+      }
+
+      document.getElementById('histBodyLoadMoreWrap').style.display = filtered.length > shown.length ? 'block' : 'none';
+    }
+// ====== 共通ヘルパー ======
+    function refreshTokenFieldUI() {
+      const inp = document.getElementById('setToken');
+      const badge = document.getElementById('tokenStatusBadge');
+      const hasToken = Boolean(state.settings.token);
+      if (hasToken) {
+        badge.innerHTML = ' <span class="badge badge-ok">設定済</span>';
+        inp.placeholder = '設定済み（変更するときだけ入力）';
+      } else {
+        badge.innerHTML = ' <span class="badge badge-off">未設定</span>';
+        inp.placeholder = '自分で設定した合言葉を入力';
+      }
+      inp.value = '';
     }
 
     function activeCategories() {
@@ -1404,7 +2870,7 @@
       await pushAutoRulesToServer('ルールを削除してシートに反映しました');
     }
 
-    // ====== 1-A. ライフログ入力 ======
+    // ====== 1-B. ✏️ ライフログ手動入力 ======
     function applyCatDefaultsSafely(cat) {
       const amtEl = document.getElementById('inpAmount');
       const calEl = document.getElementById('inpCal');
@@ -1425,12 +2891,8 @@
       const calEl = document.getElementById('inpCal');
 
       if (state.unassignedMode) {
-        if (state.lastAutoAmount != null && amtEl.value === String(state.lastAutoAmount)) {
-          amtEl.value = '';
-        }
-        if (state.lastAutoCal != null && calEl.value === String(state.lastAutoCal)) {
-          calEl.value = '';
-        }
+        if (state.lastAutoAmount != null && amtEl.value === String(state.lastAutoAmount)) amtEl.value = '';
+        if (state.lastAutoCal != null && calEl.value === String(state.lastAutoCal)) calEl.value = '';
         state.lastAutoAmount = null;
         state.lastAutoCal = null;
       } else {
@@ -1622,7 +3084,7 @@
         : (!isUnassigned && cat.is_food && cat.fixed_kcal != null ? cat.fixed_kcal : null);
 
       const rec = {
-        record_id: crypto.randomUUID ? crypto.randomUUID() : ('r_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7)),
+        record_id: newClientId('r'),
         timestamp: timestampStr,
         date: dateStr,
         category_id: isUnassigned ? UNASSIGNED_ID : cat.category_id,
@@ -1672,361 +3134,7 @@
       flushQueue();
     }
 
-    // ====== 1-B. 体重・体脂肪 入力・1日1件上書き・編集・削除 ======
-    function getBodyLogsSortedAsc() {
-      return [...state.bodyLogs].sort((a, b) => {
-        if (a.date !== b.date) return a.date.localeCompare(b.date);
-        return toSortMillis(a) - toSortMillis(b);
-      });
-    }
-
-    function getBodyLogsSortedDesc() {
-      return [...state.bodyLogs].sort((a, b) => {
-        if (a.date !== b.date) return b.date.localeCompare(a.date);
-        return toSortMillis(b) - toSortMillis(a);
-      });
-    }
-
-    function getTargetBodyDateStr() {
-      if (state.useBodyCustomDateTime) {
-        return document.getElementById('inpBodyDate').value || formatDateJst(new Date());
-      }
-      return formatDateJst(new Date());
-    }
-
-    function toggleBodyCustomDateTime(forceOff = false) {
-      state.useBodyCustomDateTime = forceOff ? false : !state.useBodyCustomDateTime;
-      const fields = document.getElementById('inpBodyDtFields');
-      const btn = document.getElementById('inpBodyDtToggleBtn');
-      if (state.useBodyCustomDateTime) {
-        const now = new Date();
-        document.getElementById('inpBodyDate').value = formatDateJst(now);
-        document.getElementById('inpBodyTime').value =
-          `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-        fields.classList.add('open');
-        btn.textContent = '現在時刻に戻す';
-        onBodyCustomDtChange();
-      } else {
-        fields.classList.remove('open');
-        btn.textContent = '日時を指定';
-        document.getElementById('inpBodyDtStatus').textContent = '現在時刻（自動）';
-        updateBodyInputContext();
-      }
-    }
-
-    function onBodyCustomDtChange() {
-      if (state.useBodyCustomDateTime) {
-        const d = document.getElementById('inpBodyDate').value;
-        const t = document.getElementById('inpBodyTime').value || '00:00';
-        document.getElementById('inpBodyDtStatus').textContent = d ? `${d} ${t}` : '日付を選択';
-      }
-      updateBodyInputContext();
-    }
-
-    function updateBodyInputContext() {
-      const sortedDesc = getBodyLogsSortedDesc();
-      const targetDate = getTargetBodyDateStr();
-      const existingSameDay = state.bodyLogs.find(b => b.date === targetDate);
-
-      // 前回値ヒント（対象日と同日を除く最新、なければ最新全体）
-      const prevWeightLog = sortedDesc.find(b => b.weight != null && b.date !== targetDate) || sortedDesc.find(b => b.weight != null);
-      const prevFatLog = sortedDesc.find(b => b.body_fat != null && b.date !== targetDate) || sortedDesc.find(b => b.body_fat != null);
-
-      const wInp = document.getElementById('inpBodyWeight');
-      const fInp = document.getElementById('inpBodyFat');
-      const wHint = document.getElementById('bodyWeightHint');
-      const fHint = document.getElementById('bodyFatHint');
-
-      if (prevWeightLog) {
-        const md = prevWeightLog.date.slice(5).replace('-', '/');
-        wHint.textContent = `前回: ${prevWeightLog.weight.toFixed(1)}kg (${md})`;
-        wInp.placeholder = `前回: ${prevWeightLog.weight.toFixed(1)}`;
-      } else {
-        wHint.textContent = '';
-        wInp.placeholder = '例: 68.4';
-      }
-
-      if (prevFatLog) {
-        fHint.textContent = `前回: ${prevFatLog.body_fat.toFixed(1)}%`;
-        fInp.placeholder = `前回: ${prevFatLog.body_fat.toFixed(1)}`;
-      } else {
-        fHint.textContent = '';
-        fInp.placeholder = '空欄OK';
-      }
-
-      const banner = document.getElementById('bodyOverwriteBanner');
-      const bannerTxt = document.getElementById('bodyOverwriteText');
-      const submitBtn = document.getElementById('btnSubmitBody');
-
-      if (existingSameDay) {
-        const curW = existingSameDay.weight != null ? `${existingSameDay.weight.toFixed(1)}kg` : '--';
-        const curF = existingSameDay.body_fat != null ? ` / ${existingSameDay.body_fat.toFixed(1)}%` : '';
-        bannerTxt.innerHTML = `📝 <strong>${esc(targetDate)}</strong> の記録（${curW}${curF}）あり → 保存すると上書きします`;
-        banner.classList.add('show');
-        submitBtn.textContent = `${targetDate} の記録を上書き保存`;
-        submitBtn.className = 'btn btn-warn';
-      } else {
-        banner.classList.remove('show');
-        submitBtn.textContent = '体重・体脂肪を記録する';
-        submitBtn.className = 'btn btn-teal';
-      }
-    }
-
-    function loadExistingBodyForDate() {
-      const targetDate = getTargetBodyDateStr();
-      const existing = state.bodyLogs.find(b => b.date === targetDate);
-      if (!existing) return;
-      document.getElementById('inpBodyWeight').value = existing.weight != null ? existing.weight : '';
-      document.getElementById('inpBodyFat').value = existing.body_fat != null ? existing.body_fat : '';
-      document.getElementById('inpBodyMemo').value = existing.memo || '';
-      toast(`${targetDate} の記録を読み込みました`);
-    }
-
-    function submitBodyLog() {
-      const wRaw = document.getElementById('inpBodyWeight').value.trim();
-      const fRaw = document.getElementById('inpBodyFat').value.trim();
-      const memo = document.getElementById('inpBodyMemo').value.trim();
-
-      if (wRaw === '') return toast('体重を入力してください');
-      const weight = Math.round(Number(wRaw) * 10) / 10;
-      if (isNaN(weight) || weight <= 0 || weight >= 500) {
-        return toast('体重を正しい数値で入力してください');
-      }
-
-      let bodyFat = null;
-      if (fRaw !== '') {
-        bodyFat = Math.round(Number(fRaw) * 10) / 10;
-        if (isNaN(bodyFat) || bodyFat < 0 || bodyFat > 100) {
-          return toast('体脂肪率を0〜100の間で入力してください');
-        }
-      }
-
-      let dateStr;
-      let timestampStr;
-      if (state.useBodyCustomDateTime) {
-        const customDate = document.getElementById('inpBodyDate').value;
-        const customTime = document.getElementById('inpBodyTime').value || '00:00';
-        if (!customDate) return toast('測定日を選択してください');
-        dateStr = customDate;
-        timestampStr = `${customDate} ${customTime}:00`;
-      } else {
-        const now = new Date();
-        dateStr = formatDateJst(now);
-        timestampStr = now.toISOString();
-      }
-
-      const existing = state.bodyLogs.find(b => b.date === dateStr);
-      const isOverwrite = Boolean(existing);
-      const isMobile = /iPhone|Android/i.test(navigator.userAgent);
-
-      const log = {
-        log_id: existing
-          ? existing.log_id
-          : (crypto.randomUUID ? crypto.randomUUID() : ('b_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7))),
-        timestamp: timestampStr,
-        date: dateStr,
-        weight,
-        body_fat: bodyFat,
-        memo,
-        device: isMobile ? 'mobile' : 'pc',
-        _unsynced: true
-      };
-
-      upsertLocalBodyLog(log);
-
-      document.getElementById('inpBodyWeight').value = '';
-      document.getElementById('inpBodyFat').value = '';
-      document.getElementById('inpBodyMemo').value = '';
-      if (state.useBodyCustomDateTime) toggleBodyCustomDateTime(true);
-
-      updateBodyInputContext();
-      renderRecentBodyList();
-      renderBodyHistoryView();
-      updateSyncBadge();
-
-      toast(isOverwrite ? `${dateStr} の体重・体脂肪を上書きしました` : '体重・体脂肪を記録しました');
-      flushBodyUpsertQueue();
-    }
-
-    function upsertLocalBodyLog(log) {
-      state.bodyLogs = state.bodyLogs.filter(b => b.log_id !== log.log_id && b.date !== log.date);
-      state.bodyLogs.push(log);
-
-      state.bodyDeleteQueue = state.bodyDeleteQueue.filter(id => id !== log.log_id);
-      state.bodyUpsertQueue = state.bodyUpsertQueue.filter(q => q.log_id !== log.log_id && q.date !== log.date);
-      state.bodyUpsertQueue.push({
-        log_id: log.log_id,
-        timestamp: log.timestamp,
-        date: log.date,
-        weight: log.weight,
-        body_fat: log.body_fat,
-        memo: log.memo,
-        device: log.device
-      });
-
-      persistLocal();
-    }
-
-    function buildPrevBodyWeightMap() {
-      const asc = getBodyLogsSortedAsc();
-      const prevMap = new Map();
-      let prevWeight = null;
-      asc.forEach(b => {
-        prevMap.set(b.log_id, prevWeight);
-        if (b.weight != null) prevWeight = b.weight;
-      });
-      return prevMap;
-    }
-
-    function formatWeightDeltaBadge(curWeight, prevWeight) {
-      if (curWeight == null || prevWeight == null) return '';
-      const diff = Math.round((curWeight - prevWeight) * 10) / 10;
-      if (diff === 0) return '<span class="delta-pill delta-flat">±0.0kg</span>';
-      if (diff < 0) return `<span class="delta-pill delta-down">${diff.toFixed(1)}kg</span>`;
-      return `<span class="delta-pill delta-up">+${diff.toFixed(1)}kg</span>`;
-    }
-
-    function renderBodyLogRowHtml(b, prevMap) {
-      const prevW = prevMap.get(b.log_id);
-      const deltaHtml = formatWeightDeltaBadge(b.weight, prevW);
-      const weightText = b.weight != null ? `${b.weight.toFixed(1)} kg` : '-- kg';
-      const fatText = b.body_fat != null ? `${b.body_fat.toFixed(1)} %` : '';
-      const unsyncedBadge = b._unsynced ? '<span class="badge badge-off">未同期</span>' : '';
-
-      return `
-        <div class="list-item" style="align-items:flex-start;">
-          <div style="min-width:0; flex:1;">
-            <div style="display:flex; align-items:center; flex-wrap:wrap; gap:4px;">
-              <span class="badge badge-teal">⚖️ ${esc(b.date)}</span>
-              ${unsyncedBadge}
-            </div>
-            <div style="margin-top:4px; font-size:15px; font-weight:800;">
-              ${weightText}${deltaHtml}
-              ${fatText ? `<span style="font-size:13px; font-weight:700; color:#7c3aed; margin-left:8px;">体脂肪 ${fatText}</span>` : ''}
-            </div>
-            ${b.memo ? `<div style="margin-top:3px; word-break:break-word; color:var(--text);">${esc(b.memo)}</div>` : ''}
-            <div style="font-size:11px; color:var(--muted); margin-top:2px;">${esc(formatDateTime(b))}</div>
-          </div>
-          <div style="text-align:right; white-space:nowrap;">
-            <div class="item-actions" style="margin-top:2px;">
-              <button class="btn-edit-mini" onclick="openEditBodyModal('${escAttr(b.log_id)}')">編集</button>
-              <button class="btn-del-mini" onclick="deleteBodyLog('${escAttr(b.log_id)}')">削除</button>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    function renderRecentBodyList() {
-      const listEl = document.getElementById('recentBodyList');
-      const items = getBodyLogsSortedDesc().slice(0, 10);
-      if (!items.length) {
-        listEl.innerHTML = '<div style="color:var(--muted);font-size:13px;">まだ体重・体脂肪の記録がありません</div>';
-        return;
-      }
-      const prevMap = buildPrevBodyWeightMap();
-      listEl.innerHTML = items.map(b => renderBodyLogRowHtml(b, prevMap)).join('');
-    }
-
-    function openEditBodyModal(logId) {
-      const b = state.bodyLogs.find(x => x.log_id === logId);
-      if (!b) return;
-      const dt = extractDateAndTime(b);
-      document.getElementById('editBodyLogId').value = b.log_id;
-      document.getElementById('editBodyDate').value = dt.date || b.date || formatDateJst(new Date());
-      document.getElementById('editBodyTime').value = dt.time || '07:00';
-      document.getElementById('editBodyWeight').value = b.weight != null ? b.weight : '';
-      document.getElementById('editBodyFat').value = b.body_fat != null ? b.body_fat : '';
-      document.getElementById('editBodyMemo').value = b.memo || '';
-      document.getElementById('editBodyModal').classList.add('open');
-    }
-
-    function closeEditBodyModal() {
-      document.getElementById('editBodyModal').classList.remove('open');
-    }
-
-    async function saveEditedBodyLog() {
-      const logId = document.getElementById('editBodyLogId').value;
-      const orig = state.bodyLogs.find(x => x.log_id === logId);
-      if (!orig) return closeEditBodyModal();
-
-      const newDate = document.getElementById('editBodyDate').value;
-      const newTime = document.getElementById('editBodyTime').value || '00:00';
-      const wRaw = document.getElementById('editBodyWeight').value.trim();
-      const fRaw = document.getElementById('editBodyFat').value.trim();
-      const memo = document.getElementById('editBodyMemo').value.trim();
-
-      if (!newDate) return toast('記録日を入力してください');
-      if (wRaw === '') return toast('体重を入力してください');
-      const weight = Math.round(Number(wRaw) * 10) / 10;
-      if (isNaN(weight) || weight <= 0 || weight >= 500) return toast('体重を正しく入力してください');
-
-      let bodyFat = null;
-      if (fRaw !== '') {
-        bodyFat = Math.round(Number(fRaw) * 10) / 10;
-        if (isNaN(bodyFat) || bodyFat < 0 || bodyFat > 100) return toast('体脂肪率は0〜100で入力してください');
-      }
-
-      const conflict = state.bodyLogs.find(x => x.date === newDate && x.log_id !== logId);
-      if (conflict) {
-        const cText = `${conflict.weight != null ? conflict.weight.toFixed(1) + 'kg' : '--'}${conflict.body_fat != null ? ' / ' + conflict.body_fat.toFixed(1) + '%' : ''}`;
-        if (!confirm(`${newDate} には既に別の記録（${cText}）があります。\nこの内容で上書き統合しますか？`)) {
-          return;
-        }
-      }
-
-      const updated = {
-        log_id: logId,
-        timestamp: `${newDate} ${newTime}:00`,
-        date: newDate,
-        weight,
-        body_fat: bodyFat,
-        memo,
-        device: orig.device || 'web',
-        _unsynced: true
-      };
-
-      closeEditBodyModal();
-      upsertLocalBodyLog(updated);
-
-      updateBodyInputContext();
-      renderRecentBodyList();
-      renderBodyHistoryView();
-      updateSyncBadge();
-
-      const synced = await flushBodyUpsertQueue();
-      toast(synced ? '体重・体脂肪を更新しました' : '端末に反映しました（次回同期時にシートへ反映）');
-    }
-
-    async function deleteBodyLog(logId) {
-      const b = state.bodyLogs.find(x => x.log_id === logId);
-      if (!b) return;
-
-      const summary = [
-        `${formatDateTime(b)}`,
-        `体重: ${b.weight != null ? b.weight.toFixed(1) + 'kg' : '--'}${b.body_fat != null ? ` / 体脂肪: ${b.body_fat.toFixed(1)}%` : ''}`,
-        b.memo ? b.memo : ''
-      ].filter(Boolean).join('\n');
-
-      if (!confirm(`この体重・体脂肪の記録を削除しますか？\n\n${summary}`)) return;
-
-      state.bodyLogs = state.bodyLogs.filter(x => x.log_id !== logId);
-      state.bodyUpsertQueue = state.bodyUpsertQueue.filter(q => q.log_id !== logId);
-      if (!state.bodyDeleteQueue.includes(logId)) {
-        state.bodyDeleteQueue.push(logId);
-      }
-
-      persistLocal();
-      updateBodyInputContext();
-      renderRecentBodyList();
-      renderBodyHistoryView();
-      updateSyncBadge();
-
-      const synced = await flushBodyDeleteQueue();
-      toast(synced ? '記録を削除しました' : '端末から削除しました（次回同期時にシートへ反映）');
-    }
-
-    // ====== AI分類候補のワンタップ承認 ======
+    // ====== AI分類候補のワンタップ承認・ライフログ編集/削除 ======
     async function approveAiCategory(recordId) {
       const rec = state.records.find(r => r.record_id === recordId);
       if (!rec || !rec.ai_cat_id) return;
@@ -2072,7 +3180,6 @@
       await applyRecordUpdate(rec, updatedFields, `確定しました: ${cat.cat1} › ${cat.cat2} › ${cat.cat3}`);
     }
 
-    // ====== ライフログ編集モーダル ======
     function getEditModalCatPool() {
       const list = [...activeCategories()];
       if (state.editModalLegacyCat && !list.some(c => c.category_id === state.editModalLegacyCat.category_id)) {
@@ -2370,11 +3477,7 @@
       updateSyncBadge();
 
       const synced = await flushDeleteQueue();
-      if (synced) {
-        toast('記録を削除しました');
-      } else {
-        toast('端末から削除しました（次回同期時にシートへ反映）');
-      }
+      toast(synced ? '記録を削除しました' : '端末から削除しました（次回同期時にシートへ反映）');
     }
 
     function toSortMillis(rec) {
@@ -2417,9 +3520,7 @@
       const badges = [];
       if (isUnassigned) {
         badges.push('<span class="badge badge-unassigned">📥 未分類</span>');
-        if (r.ai_cat_status === 'PENDING') {
-          badges.push('<span class="badge badge-ai">✨ AI分類待ち</span>');
-        }
+        if (r.ai_cat_status === 'PENDING') badges.push('<span class="badge badge-ai">✨ AI分類待ち</span>');
       } else {
         badges.push(`<span class="badge">${esc(r.cat1)} › ${esc(r.cat2)} › ${esc(r.cat3)}</span>`);
       }
@@ -2650,88 +3751,12 @@
         listEl.innerHTML = shown.map(renderRecordRowHtml).join('');
       }
 
-      const moreWrap = document.getElementById('histLoadMoreWrap');
-      moreWrap.style.display = filtered.length > shown.length ? 'block' : 'none';
+      document.getElementById('histLoadMoreWrap').style.display = filtered.length > shown.length ? 'block' : 'none';
     }
 
     function renderHistoryView() {
       renderHistoryFilters();
       renderHistoryList();
-    }
-
-    // ====== 2-B. 記録（体重・体脂肪履歴）タブ ======
-    function onBodyHistoryFilterChange() {
-      state.histBodyFilter.period = document.getElementById('histBodyPeriod').value;
-      state.histBodyFilter.keyword = document.getElementById('histBodyKeyword').value.trim();
-      state.histBodyLimit = 50;
-      renderBodyHistoryView();
-    }
-
-    function resetBodyHistoryFilter() {
-      state.histBodyFilter = { period: 'all', keyword: '' };
-      state.histBodyLimit = 50;
-      document.getElementById('histBodyPeriod').value = 'all';
-      document.getElementById('histBodyKeyword').value = '';
-      renderBodyHistoryView();
-    }
-
-    function loadMoreBodyHistory() {
-      state.histBodyLimit += 50;
-      renderBodyHistoryView();
-    }
-
-    function renderBodyHistoryView() {
-      const f = state.histBodyFilter;
-      document.getElementById('histBodyPeriod').value = f.period;
-      if (document.getElementById('histBodyKeyword').value !== f.keyword) {
-        document.getElementById('histBodyKeyword').value = f.keyword;
-      }
-
-      const { startDate, endDate } = getPeriodDateRange(f.period);
-      const kw = (f.keyword || '').toLowerCase();
-
-      const filtered = getBodyLogsSortedDesc().filter(b => {
-        if (startDate && b.date < startDate) return false;
-        if (endDate && b.date > endDate) return false;
-        if (kw && !`${b.memo || ''} ${b.date || ''}`.toLowerCase().includes(kw)) return false;
-        return true;
-      });
-
-      const weights = filtered.map(b => b.weight).filter(v => v != null);
-      const fats = filtered.map(b => b.body_fat).filter(v => v != null);
-
-      const avgW = weights.length ? (weights.reduce((a, v) => a + v, 0) / weights.length) : null;
-      const avgF = fats.length ? (fats.reduce((a, v) => a + v, 0) / fats.length) : null;
-
-      document.getElementById('histBodyAvgWeight').textContent = avgW != null ? `${avgW.toFixed(1)} kg` : '-- kg';
-      document.getElementById('histBodyAvgFat').textContent = avgF != null ? `${avgF.toFixed(1)} %` : '-- %';
-
-      const deltaEl = document.getElementById('histBodyDelta');
-      if (weights.length >= 2) {
-        const diff = Math.round((weights[0] - weights[weights.length - 1]) * 10) / 10;
-        const sign = diff > 0 ? '+' : (diff === 0 ? '±' : '');
-        deltaEl.textContent = `${sign}${diff.toFixed(1)} kg`;
-        deltaEl.style.color = diff < 0 ? 'var(--success)' : (diff > 0 ? 'var(--danger)' : 'var(--text)');
-      } else {
-        deltaEl.textContent = '--';
-        deltaEl.style.color = 'var(--text)';
-      }
-
-      const shown = filtered.slice(0, state.histBodyLimit);
-      document.getElementById('histBodyListTitle').textContent =
-        filtered.length > shown.length
-          ? `⚖️ 体重・体脂肪一覧（${shown.length} / ${filtered.length} 件表示）`
-          : `⚖️ 体重・体脂肪一覧（${filtered.length} 件）`;
-
-      const listEl = document.getElementById('historyBodyList');
-      if (!filtered.length) {
-        listEl.innerHTML = '<div style="color:var(--muted);font-size:13px;">条件に一致する記録がありません</div>';
-      } else {
-        const prevMap = buildPrevBodyWeightMap();
-        listEl.innerHTML = shown.map(b => renderBodyLogRowHtml(b, prevMap)).join('');
-      }
-
-      document.getElementById('histBodyLoadMoreWrap').style.display = filtered.length > shown.length ? 'block' : 'none';
     }
 
     // ====== 3. 6期間グラフ分析（支出・カロリー・体重/体脂肪） ======
@@ -2802,7 +3827,7 @@
       document.getElementById('kpiCalAvg').textContent = (calDays ? Math.round(calSum / calDays).toLocaleString() : 0) + ' kcal';
       document.getElementById('kpiCount').textContent = inRange.length + ' 件';
 
-      // 体重・体脂肪 KPI（期間内優先、0件なら全期間の最新を参考表示）
+      // 体重・体脂肪 KPI（期間内データ優先、0件なら全期間最新を参考表示）
       const allBodyDesc = getBodyLogsSortedDesc();
       const latestWInRange = [...inRangeBody].reverse().find(b => b.weight != null);
       const firstWInRange = inRangeBody.find(b => b.weight != null);
@@ -2890,7 +3915,6 @@
         options: { responsive: true, maintainAspectRatio: false }
       });
 
-      // 体重・体脂肪 2軸折れ線グラフ
       const bodyDatasets = [
         {
           label: '体重(kg)',
@@ -3258,6 +4282,82 @@
       }
     }
 
+    async function flushTweetAddQueue() {
+      if (!state.tweetAddQueue.length || !navigator.onLine || !state.settings.gasUrl || !state.settings.token) {
+        updateSyncBadge();
+        return false;
+      }
+      const batch = [...state.tweetAddQueue];
+      try {
+        await postGas({ action: 'add_tweets', tweets: batch });
+        const sentIds = new Set(batch.map(x => x.tweet_id));
+        state.tweetAddQueue = state.tweetAddQueue.filter(x => !sentIds.has(x.tweet_id));
+        const pendingDoneIds = new Set(state.tweetCompleteQueue.map(c => c.tweet_id));
+        state.tweetInbox.forEach(t => {
+          if (sentIds.has(t.tweet_id) && !pendingDoneIds.has(t.tweet_id)) delete t._unsynced;
+        });
+        persistLocal();
+        renderRecentTweetList();
+        renderTweetHistoryView();
+        updateSyncBadge();
+        return true;
+      } catch (_) {
+        updateSyncBadge();
+        return false;
+      }
+    }
+
+    async function flushTweetCompleteQueue() {
+      if (!state.tweetCompleteQueue.length || !navigator.onLine || !state.settings.gasUrl || !state.settings.token) {
+        updateSyncBadge();
+        return false;
+      }
+      const batch = [...state.tweetCompleteQueue];
+      let allOk = true;
+      for (const item of batch) {
+        try {
+          await postGas({ action: 'complete_tweet', ...item });
+          state.tweetCompleteQueue = state.tweetCompleteQueue.filter(x => x.tweet_id !== item.tweet_id);
+          const recIds = new Set((item.records || []).map(r => r.record_id));
+          const bodyIds = new Set((item.body_logs || []).map(b => b.log_id));
+          state.records.forEach(r => { if (recIds.has(r.record_id)) delete r._unsynced; });
+          state.bodyLogs.forEach(b => { if (bodyIds.has(b.log_id)) delete b._unsynced; });
+          state.tweetInbox.forEach(t => { if (t.tweet_id === item.tweet_id) delete t._unsynced; });
+          persistLocal();
+        } catch (_) {
+          allOk = false;
+          break;
+        }
+      }
+      renderRecentTweetList();
+      renderRecentList();
+      renderRecentBodyList();
+      renderHistoryList();
+      renderBodyHistoryView();
+      renderTweetHistoryView();
+      updateSyncBadge();
+      return allOk;
+    }
+
+    async function flushTweetDeleteQueue() {
+      if (!state.tweetDeleteQueue.length || !navigator.onLine || !state.settings.gasUrl || !state.settings.token) {
+        updateSyncBadge();
+        return false;
+      }
+      const batch = [...state.tweetDeleteQueue];
+      try {
+        await postGas({ action: 'delete_tweets', tweet_ids: batch });
+        const doneIds = new Set(batch);
+        state.tweetDeleteQueue = state.tweetDeleteQueue.filter(id => !doneIds.has(id));
+        persistLocal();
+        updateSyncBadge();
+        return true;
+      } catch (_) {
+        updateSyncBadge();
+        return false;
+      }
+    }
+
     async function syncAll(showMsg) {
       if (!state.settings.gasUrl || !state.settings.token) {
         updateSyncBadge();
@@ -3269,6 +4369,9 @@
       await flushDeleteQueue();
       await flushBodyUpsertQueue();
       await flushBodyDeleteQueue();
+      await flushTweetAddQueue();
+      await flushTweetCompleteQueue();
+      await flushTweetDeleteQueue();
 
       if (state.autoRulesDirty && navigator.onLine) {
         try {
@@ -3286,33 +4389,71 @@
 
         state.categories = data.categories;
 
-        // records 同期マージ
+        // 1. records 同期マージ
         const pendingDelSet = new Set(state.deleteQueue);
         const pendingUpdMap = new Map(state.updateQueue.map(u => [u.record_id, u]));
+        const pendingTweetRecs = state.tweetCompleteQueue.flatMap(c => c.records || []);
 
         const serverRecords = (data.records || [])
           .filter(r => !pendingDelSet.has(r.record_id))
           .map(r => pendingUpdMap.has(r.record_id) ? { ...r, ...pendingUpdMap.get(r.record_id), _unsynced: true } : r);
 
-        const serverIds = new Set(serverRecords.map(r => r.record_id));
-        const pendingLocal = state.queue.filter(r => !serverIds.has(r.record_id) && !pendingDelSet.has(r.record_id));
-        state.records = [...serverRecords, ...pendingLocal];
+        const serverRecIds = new Set(serverRecords.map(r => r.record_id));
+        const pendingLocalRecs = [...state.queue, ...pendingTweetRecs].filter(
+          r => !serverRecIds.has(r.record_id) && !pendingDelSet.has(r.record_id)
+        );
+        state.records = [...serverRecords, ...pendingLocalRecs];
 
-        // bodyLogs 同期マージ（1日1件を保ちつつ未送信キューを優先反映）
+        // 2. bodyLogs 同期マージ（1日1件を保ちつつ未送信キューを優先）
         const pendingBodyDelSet = new Set(state.bodyDeleteQueue);
-        const pendingBodyUpsertIds = new Set(state.bodyUpsertQueue.map(b => b.log_id));
-        const pendingBodyUpsertDates = new Set(state.bodyUpsertQueue.map(b => b.date));
+        const pendingTweetBodies = state.tweetCompleteQueue.flatMap(c => c.body_logs || []);
+        const allPendingBodies = [...state.bodyUpsertQueue, ...pendingTweetBodies]
+          .filter(b => !pendingBodyDelSet.has(b.log_id));
+        const pendingBodyIds = new Set(allPendingBodies.map(b => b.log_id));
+        const pendingBodyDates = new Set(allPendingBodies.map(b => b.date));
 
         const serverBodyLogs = (data.bodyLogs || []).filter(b =>
           !pendingBodyDelSet.has(b.log_id) &&
-          !pendingBodyUpsertIds.has(b.log_id) &&
-          !pendingBodyUpsertDates.has(b.date)
+          !pendingBodyIds.has(b.log_id) &&
+          !pendingBodyDates.has(b.date)
         );
-        const pendingBodyLocal = state.bodyUpsertQueue
-          .filter(b => !pendingBodyDelSet.has(b.log_id))
-          .map(b => ({ ...b, _unsynced: true }));
-        state.bodyLogs = [...serverBodyLogs, ...pendingBodyLocal];
+        state.bodyLogs = [
+          ...serverBodyLogs,
+          ...allPendingBodies.map(b => ({ ...b, _unsynced: true }))
+        ];
 
+        // 3. tweetInbox 同期マージ
+        const pendingTweetDelSet = new Set(state.tweetDeleteQueue);
+        const pendingTweetDoneMap = new Map(state.tweetCompleteQueue.map(c => [c.tweet_id, c]));
+
+        const serverTweets = (data.tweetInbox || [])
+          .filter(t => !pendingTweetDelSet.has(t.tweet_id))
+          .map(t => pendingTweetDoneMap.has(t.tweet_id)
+            ? { ...t, status: 'DONE', parsed_items: pendingTweetDoneMap.get(t.tweet_id).parsed_items, error_note: '', _unsynced: true }
+            : t
+          );
+
+        const serverTweetIds = new Set(serverTweets.map(t => t.tweet_id));
+        const pendingAddTweets = state.tweetAddQueue
+          .filter(t => !serverTweetIds.has(t.tweet_id) && !pendingTweetDelSet.has(t.tweet_id) && !pendingTweetDoneMap.has(t.tweet_id))
+          .map(t => ({ ...t, _unsynced: true }));
+        const pendingDoneTweets = state.tweetCompleteQueue
+          .filter(c => !serverTweetIds.has(c.tweet_id) && !pendingTweetDelSet.has(c.tweet_id))
+          .map(c => ({
+            tweet_id: c.tweet_id,
+            timestamp: c.timestamp,
+            date: c.date,
+            raw_text: c.raw_text,
+            status: 'DONE',
+            parsed_items: c.parsed_items || [],
+            error_note: '',
+            device: c.device || 'web',
+            _unsynced: true
+          }));
+
+        state.tweetInbox = [...pendingAddTweets, ...pendingDoneTweets, ...serverTweets];
+
+        // 4. autoRules 同期
         if (data.autoRules && !state.autoRulesDirty) {
           const srvEmpty = !data.autoRules.fallbackCatId && !(data.autoRules.rules && data.autoRules.rules.length);
           const locHas = Boolean(state.autoRules.fallbackCatId) || (state.autoRules.rules && state.autoRules.rules.length > 0);
@@ -3339,12 +4480,14 @@
 
     async function triggerAiNow() {
       try {
-        toast('AIカロリー計算・分類提案を実行中...');
+        toast('AIカロリー計算・分類提案・つぶやき分解を実行中...');
+        await flushTweetAddQueue();
         const res = await postGas({ action: 'run_ai_now' });
         await syncAll(false);
         const calCnt = res.calProcessed ?? res.processed ?? 0;
         const catCnt = res.catProcessed ?? 0;
-        toast(`AI完了（カロリー${calCnt}件・分類提案${catCnt}件）`);
+        const twCnt = res.tweetProcessed ?? 0;
+        toast(`AI完了（カロリー${calCnt}・分類${catCnt}・つぶやき${twCnt}件）`);
       } catch (err) {
         toast('エラー: ' + err.message);
       }
@@ -3358,6 +4501,9 @@
         state.deleteQueue.length +
         state.bodyUpsertQueue.length +
         state.bodyDeleteQueue.length +
+        state.tweetAddQueue.length +
+        state.tweetCompleteQueue.length +
+        state.tweetDeleteQueue.length +
         (state.autoRulesDirty ? 1 : 0);
 
       if (!state.settings.gasUrl) {
@@ -3378,15 +4524,21 @@
       localStorage.setItem(KEYS.bodyLogs, JSON.stringify(state.bodyLogs));
       localStorage.setItem(KEYS.bodyUpsertQueue, JSON.stringify(state.bodyUpsertQueue));
       localStorage.setItem(KEYS.bodyDeleteQueue, JSON.stringify(state.bodyDeleteQueue));
+      localStorage.setItem(KEYS.tweetInbox, JSON.stringify(state.tweetInbox));
+      localStorage.setItem(KEYS.tweetAddQueue, JSON.stringify(state.tweetAddQueue));
+      localStorage.setItem(KEYS.tweetCompleteQueue, JSON.stringify(state.tweetCompleteQueue));
+      localStorage.setItem(KEYS.tweetDeleteQueue, JSON.stringify(state.tweetDeleteQueue));
     }
 
     function renderAll() {
       renderInputControls();
+      renderRecentTweetList();
       renderRecentList();
       updateBodyInputContext();
       renderRecentBodyList();
       renderHistoryView();
       renderBodyHistoryView();
+      renderTweetHistoryView();
       renderCategoryManager();
       renderAutoRuleSettings();
       renderShortcutUrlSelect();
