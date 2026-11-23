@@ -66,20 +66,23 @@
     .inbox-banner.show { display: flex; }
     .inbox-banner strong { font-weight: 800; }
 
-    /* ショートカット */
+    /* ショートカット（分類エリア内に格納） */
+    .shortcut-wrap {
+      margin-bottom: 10px;
+    }
     .shortcut-grid {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 8px;
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(106px, 1fr)); gap: 6px;
     }
     .shortcut-btn {
       border: 1.5px solid var(--border); background: #fff; border-radius: 10px;
-      padding: 10px 8px; font-size: 13px; font-weight: 600; color: var(--text);
+      padding: 8px 6px; font-size: 12px; font-weight: 600; color: var(--text);
       cursor: pointer; text-align: center; transition: 0.12s;
     }
     .shortcut-btn.selected {
       border-color: var(--primary); background: var(--primary-bg); color: var(--primary);
     }
 
-    /* 選択中パス ＋ あとで分類スイッチ（案B） */
+    /* 分類バー（選択中パス ＋ あとで分類スイッチ） */
     .selected-path {
       display: flex; align-items: center; flex-wrap: wrap; gap: 4px;
       background: #f8fafc; border: 1px solid var(--border); border-radius: 10px;
@@ -108,7 +111,7 @@
       cursor: pointer; transition: 0.12s;
     }
     .later-switch-btn.active {
-      background: #f59e0b; border-color: #d97706; color: #fff;
+      background: var(--primary-bg); border-color: #93c5fd; color: var(--primary);
     }
 
     /* 階層別ボックス */
@@ -118,7 +121,7 @@
     }
     .cat-group.l1 { background: var(--l1-bg); border-left-color: var(--l1); }
     .cat-group.l2 { background: var(--l2-bg); border-left-color: var(--l2); }
-    .cat-group.l3 { background: var(--l3-bg); border-left-color: var(--l3); margin-bottom: 12px; }
+    .cat-group.l3 { background: var(--l3-bg); border-left-color: var(--l3); margin-bottom: 10px; }
     .cat-group-label {
       font-size: 11px; font-weight: 800; margin-bottom: 6px;
       display: flex; align-items: center; gap: 5px;
@@ -413,22 +416,41 @@
   </div>
 
   <main>
-    <!-- ========== 1. 入力タブ ========== -->
+    <!-- ========== 1. 入力タブ（内容メモ → 金額・カロリー → 分類 → 日時） ========== -->
     <section id="view-input" class="view active">
       <div id="inputInboxBanner" class="inbox-banner">
         <span>📥 未分類の記録が <strong id="inputInboxCount">0</strong> 件あります</span>
         <button class="btn btn-warn btn-sm" onclick="jumpToUnassignedHistory()">整理する</button>
       </div>
 
-      <div class="card" id="shortcutCard">
-        <p class="section-title">⚡ ショートカット（1タップ選択）</p>
-        <div id="shortcutGrid" class="shortcut-grid"></div>
-      </div>
-
       <div class="card">
+        <!-- 1. 内容メモ -->
+        <div class="field">
+          <label for="inpMemo">内容メモ（食べ物・買ったもの・気持ちなど）</label>
+          <textarea id="inpMemo" rows="2" autocomplete="off" placeholder="例: 豚骨ラーメン 麺少なめ / スタバ ラテ / 会議がスムーズに終わった"></textarea>
+        </div>
+
+        <!-- 2. 金額・カロリー -->
+        <div class="row-2">
+          <div class="field">
+            <label for="inpAmount">金額（円）</label>
+            <input id="inpAmount" type="number" inputmode="numeric" autocomplete="off" placeholder="例: 950" />
+          </div>
+          <div class="field" id="calFieldWrap">
+            <label for="inpCal">カロリー（kcal）</label>
+            <input id="inpCal" type="number" inputmode="numeric" autocomplete="off" placeholder="分類確定後にAI自動計算" />
+          </div>
+        </div>
+
+        <!-- 3. 分類（デフォルトは「あとで分類」で折りたたみ） -->
         <div id="selectedPath" class="selected-path"></div>
 
-        <div id="catPickerWrap">
+        <div id="catPickerWrap" style="display:none;">
+          <div id="shortcutWrap" class="shortcut-wrap">
+            <p class="section-title">⚡ ショートカット（1タップ選択）</p>
+            <div id="shortcutGrid" class="shortcut-grid"></div>
+          </div>
+
           <div class="cat-group l1">
             <div class="cat-group-label"><span class="step-num">1</span> 大分類</div>
             <div id="cat1Chips" class="chip-row"></div>
@@ -445,22 +467,7 @@
           </div>
         </div>
 
-        <div class="row-2">
-          <div class="field">
-            <label for="inpAmount">金額（円）</label>
-            <input id="inpAmount" type="number" inputmode="numeric" autocomplete="off" placeholder="例: 950" />
-          </div>
-          <div class="field" id="calFieldWrap">
-            <label for="inpCal">カロリー（kcal）</label>
-            <input id="inpCal" type="number" inputmode="numeric" autocomplete="off" placeholder="空欄ならAI自動計算" />
-          </div>
-        </div>
-
-        <div class="field">
-          <label for="inpMemo">内容メモ（食べ物・気持ちなど）</label>
-          <textarea id="inpMemo" rows="2" autocomplete="off" placeholder="例: 豚骨ラーメン 麺少なめ / 会議がスムーズに終わった"></textarea>
-        </div>
-
+        <!-- 4. 日時指定 -->
         <div class="dt-bar">
           <span>🕒 記録日時: <strong id="inpDtStatus">現在時刻（自動）</strong></span>
           <button type="button" id="inpDtToggleBtn" class="btn btn-sub btn-sm" onclick="toggleCustomDateTime()">日時を指定</button>
@@ -476,7 +483,7 @@
           </div>
         </div>
 
-        <button id="btnSubmitRecord" class="btn btn-primary" onclick="submitRecord()">記録する</button>
+        <button id="btnSubmitRecord" class="btn btn-primary" onclick="submitRecord()">記録する（あとで分類）</button>
       </div>
 
       <div class="card">
@@ -759,7 +766,9 @@
       autoRulesDirty: localStorage.getItem(KEYS.autoRulesDirty) === '1',
       holidaysCache: JSON.parse(localStorage.getItem(KEYS.holidays) || '{"fetchedAt":0,"dates":{}}'),
       selCat1: '', selCat2: '', selCatId: '',
-      unassignedMode: false,
+      lastAutoAmount: null,
+      lastAutoCal: null,
+      unassignedMode: true,
       useCustomDateTime: false,
       editModalLegacyCat: null,
       histFilter: { cat1: '', cat2: '', cat3: '', period: 'all', keyword: '', unassignedOnly: false },
@@ -804,8 +813,11 @@
       const urlCat = params.get('cat');
       if (urlCat) {
         state.hasUrlCatParam = true;
+        state.unassignedMode = false;
         selectByCategoryId(urlCat, false);
       } else {
+        // 通常起動はデフォルト「あとで分類」ON（裏で現在時刻の分類候補も準備）
+        state.unassignedMode = true;
         applyAutoDefaultCategory(true);
       }
 
@@ -813,8 +825,8 @@
       updateSyncBadge();
 
       refreshHolidaysIfNeeded().then((updated) => {
-        if (updated && !state.userManuallyPicked && !state.hasUrlCatParam && !state.unassignedMode) {
-          applyAutoDefaultCategory(false);
+        if (updated && !state.userManuallyPicked && !state.hasUrlCatParam) {
+          applyAutoDefaultCategory(true);
         }
         renderAutoRuleSettings();
       });
@@ -828,9 +840,10 @@
         if (document.visibilityState === 'visible' && !state.hasUrlCatParam) {
           const amt = document.getElementById('inpAmount').value.trim();
           const memo = document.getElementById('inpMemo').value.trim();
-          if (!amt && !memo && !state.useCustomDateTime && !state.unassignedMode) {
+          if (!amt && !memo && !state.useCustomDateTime) {
+            state.unassignedMode = true;
             state.userManuallyPicked = false;
-            applyAutoDefaultCategory(false);
+            applyAutoDefaultCategory(true);
           }
         }
       });
@@ -849,17 +862,14 @@
     function updateUnassignedIndicators() {
       const count = getUnassignedRecordsSorted().length;
 
-      // ボトムナビ「記録」タブの赤バッジ
       const navBadge = document.getElementById('navUnassignedBadge');
       navBadge.textContent = count > 99 ? '99+' : String(count);
       navBadge.classList.toggle('show', count > 0);
 
-      // 入力タブ上部の未分類バナー
       const banner = document.getElementById('inputInboxBanner');
       document.getElementById('inputInboxCount').textContent = String(count);
       banner.classList.toggle('show', count > 0);
 
-      // 記録タブの「未分類のみ表示」ボタン
       const fBtn = document.getElementById('btnUnassignedFilter');
       const fLabel = document.getElementById('btnUnassignedLabel');
       const fState = document.getElementById('btnUnassignedState');
@@ -1099,7 +1109,7 @@
 
     async function saveFallbackCategory() {
       state.autoRules.fallbackCatId = document.getElementById('fallbackCatSelect').value;
-      if (!state.userManuallyPicked && !state.unassignedMode) applyAutoDefaultCategory(true);
+      if (!state.userManuallyPicked) applyAutoDefaultCategory(true);
       await pushAutoRulesToServer('基本デフォルトをシートに保存しました');
     }
 
@@ -1112,27 +1122,53 @@
 
       state.autoRules.rules = state.autoRules.rules || [];
       state.autoRules.rules.push({ id: 'ar_' + Date.now(), dayType, start, end, category_id });
-      if (!state.userManuallyPicked && !state.unassignedMode) applyAutoDefaultCategory(true);
+      if (!state.userManuallyPicked) applyAutoDefaultCategory(true);
       await pushAutoRulesToServer('ルールを追加してシートに保存しました');
     }
 
     async function deleteAutoRule(index) {
       state.autoRules.rules.splice(index, 1);
-      if (!state.userManuallyPicked && !state.unassignedMode) applyAutoDefaultCategory(true);
+      if (!state.userManuallyPicked) applyAutoDefaultCategory(true);
       await pushAutoRulesToServer('ルールを削除してシートに反映しました');
     }
 
-    // ====== 1. 入力・案B「あとで分類」スイッチ・3階層連動・日時指定 ======
+    // ====== 1. 入力・あとで分類スイッチ（デフォルトON）・3階層連動・日時指定 ======
+    function applyCatDefaultsSafely(cat) {
+      const amtEl = document.getElementById('inpAmount');
+      const calEl = document.getElementById('inpCal');
+
+      // すでにユーザーが金額を手入力している場合は上書きしない
+      if (amtEl.value === '' || (state.lastAutoAmount != null && amtEl.value === String(state.lastAutoAmount))) {
+        amtEl.value = cat.default_amount ?? '';
+        state.lastAutoAmount = cat.default_amount ?? null;
+      }
+      if (calEl.value === '' || (state.lastAutoCal != null && calEl.value === String(state.lastAutoCal))) {
+        calEl.value = cat.fixed_kcal ?? '';
+        state.lastAutoCal = cat.fixed_kcal ?? null;
+      }
+    }
+
     function toggleUnassignedMode(forceVal) {
       state.unassignedMode = (typeof forceVal === 'boolean') ? forceVal : !state.unassignedMode;
+      const amtEl = document.getElementById('inpAmount');
+      const calEl = document.getElementById('inpCal');
+
       if (state.unassignedMode) {
-        // 既定金額・固定カロリーが入っていたら邪魔しないようクリア
-        const curCat = state.categories.find(c => c.category_id === state.selCatId);
-        if (curCat && curCat.default_amount != null && document.getElementById('inpAmount').value === String(curCat.default_amount)) {
-          document.getElementById('inpAmount').value = '';
+        // 自動入力されていた既定値だけクリア（手入力した金額はそのまま残す）
+        if (state.lastAutoAmount != null && amtEl.value === String(state.lastAutoAmount)) {
+          amtEl.value = '';
         }
-        if (curCat && curCat.fixed_kcal != null && document.getElementById('inpCal').value === String(curCat.fixed_kcal)) {
-          document.getElementById('inpCal').value = '';
+        if (state.lastAutoCal != null && calEl.value === String(state.lastAutoCal)) {
+          calEl.value = '';
+        }
+        state.lastAutoAmount = null;
+        state.lastAutoCal = null;
+      } else {
+        if (!state.userManuallyPicked) {
+          applyAutoDefaultCategory(true);
+        } else {
+          const curCat = state.categories.find(c => c.category_id === state.selCatId);
+          if (curCat) applyCatDefaultsSafely(curCat);
         }
       }
       renderInputControls();
@@ -1173,47 +1209,45 @@
       state.selCatId = cat.category_id;
 
       if (!state.unassignedMode) {
-        document.getElementById('inpAmount').value = cat.default_amount ?? '';
-        document.getElementById('inpCal').value = cat.fixed_kcal ?? '';
+        applyCatDefaultsSafely(cat);
       }
       renderInputControls();
     }
 
     function renderInputControls() {
       const cats = activeCategories();
-      const scCard = document.getElementById('shortcutCard');
-      const scEl = document.getElementById('shortcutGrid');
       const pickerWrap = document.getElementById('catPickerWrap');
+      const scWrap = document.getElementById('shortcutWrap');
+      const scEl = document.getElementById('shortcutGrid');
       const pathEl = document.getElementById('selectedPath');
       const submitBtn = document.getElementById('btnSubmitRecord');
 
       if (state.unassignedMode) {
-        scCard.style.display = 'none';
         pickerWrap.style.display = 'none';
         pathEl.classList.add('unassigned-mode');
         pathEl.innerHTML = `
-          <span class="path-tag unassigned">📥 未分類で仮記録（AIが分類候補を自動提案）</span>
+          <span class="path-tag unassigned">📥 あとで分類（AI自動提案）</span>
           <div class="path-controls">
-            <button type="button" class="later-switch-btn active" onclick="toggleUnassignedMode(false)">📥 あとで分類 ON</button>
+            <button type="button" class="later-switch-btn active" onclick="toggleUnassignedMode(false)">🏷️ 今すぐ分類</button>
           </div>
         `;
         document.getElementById('calFieldWrap').style.opacity = '0.55';
         document.getElementById('inpCal').placeholder = '分類確定後にAI自動計算';
-        submitBtn.textContent = '📥 分類なしで仮記録する';
-        submitBtn.className = 'btn btn-warn';
+        submitBtn.textContent = '記録する（あとで分類）';
+        submitBtn.className = 'btn btn-primary';
         return;
       }
 
       pickerWrap.style.display = 'block';
       pathEl.classList.remove('unassigned-mode');
-      submitBtn.textContent = '記録する';
+      submitBtn.textContent = 'この分類で記録する';
       submitBtn.className = 'btn btn-primary';
 
       const shortcuts = cats.filter(c => c.shortcut_label);
       if (!shortcuts.length) {
-        scCard.style.display = 'none';
+        scWrap.style.display = 'none';
       } else {
-        scCard.style.display = 'block';
+        scWrap.style.display = 'block';
         scEl.innerHTML = shortcuts.map(c => `
           <button class="shortcut-btn ${c.category_id === state.selCatId ? 'selected' : ''}"
                   onclick="selectByCategoryId('${c.category_id}', true)">${esc(c.shortcut_label)}</button>
@@ -1295,7 +1329,7 @@
       const memo = document.getElementById('inpMemo').value.trim();
 
       if (!amtRaw && !memo && !calRaw && (!cat || cat.fixed_kcal == null)) {
-        return toast('金額またはメモを入力してください');
+        return toast('内容メモまたは金額を入力してください');
       }
 
       let dateStr;
@@ -1344,23 +1378,23 @@
       persistLocal();
 
       document.getElementById('inpMemo').value = '';
+      document.getElementById('inpAmount').value = '';
+      document.getElementById('inpCal').value = '';
+      state.lastAutoAmount = null;
+      state.lastAutoCal = null;
       if (state.useCustomDateTime) toggleCustomDateTime(true);
 
-      if (isUnassigned) {
-        state.unassignedMode = false;
-        document.getElementById('inpAmount').value = '';
-        document.getElementById('inpCal').value = '';
-        if (!state.userManuallyPicked && !state.hasUrlCatParam) {
-          applyAutoDefaultCategory(true);
-        } else {
-          renderInputControls();
-        }
-        toast('未分類で仮記録しました（AIが候補を自動提案します）');
+      // URLショートカット起動時以外は、記録後にデフォルトの「あとで分類」へ戻す
+      if (!state.hasUrlCatParam) {
+        state.unassignedMode = true;
+        state.userManuallyPicked = false;
+        applyAutoDefaultCategory(true);
       } else {
-        document.getElementById('inpAmount').value = cat.default_amount ?? '';
-        document.getElementById('inpCal').value = cat.fixed_kcal ?? '';
-        toast('記録しました');
+        applyCatDefaultsSafely(cat);
+        renderInputControls();
       }
+
+      toast(isUnassigned ? '記録しました（AIが分類候補を自動提案します）' : '記録しました');
 
       renderRecentList();
       renderHistoryView();
@@ -1374,7 +1408,7 @@
       const rec = state.records.find(r => r.record_id === recordId);
       if (!rec || !rec.ai_cat_id) return;
       const cat = state.categories.find(c => c.category_id === rec.ai_cat_id && c.active);
-      if (!cat) return toast('提案された分類が見つかりません。編集画面から選んでください。');
+      if (!cat) return toast('提案された分類が見つかりません。分類ボタンから選んでください。');
 
       const dt = extractDateAndTime(rec);
       const dateStr = dt.date || rec.date || formatDateJst(new Date());
@@ -1490,7 +1524,6 @@
       const isUnassigned = isRecordUnassigned(rec);
       document.getElementById('editRecId').value = rec.record_id;
 
-      // 削除済み旧分類で保存されている場合のフォールバック
       const activeCats = activeCategories();
       if (!isUnassigned && !activeCats.some(c => c.category_id === rec.category_id)) {
         state.editModalLegacyCat = {
@@ -1503,7 +1536,6 @@
         state.editModalLegacyCat = null;
       }
 
-      // AI提案チェック＆初期選択
       const aiHintEl = document.getElementById('editAiHint');
       const suggestedCat = (isUnassigned && rec.ai_cat_id)
         ? activeCats.find(c => c.category_id === rec.ai_cat_id)
@@ -1522,7 +1554,6 @@
         populateEditCatSelects(rec.category_id || UNASSIGNED_ID);
       }
 
-      // タイトル＆「保存して次の未分類へ」ボタンの表示制御
       const otherUnassigned = getUnassignedRecordsSorted().filter(r => r.record_id !== recordId);
       const nextBtn = document.getElementById('btnSaveAndNext');
       if (isUnassigned) {
@@ -1622,10 +1653,8 @@
         ai_cat_note: keepAiSug ? rec.ai_cat_note : ''
       };
 
-      // 次の未分類を先に特定（ローカル反映後に開く）
       if (goNextUnassigned) {
         const nextList = getUnassignedRecordsSorted().filter(r => r.record_id !== recordId);
-        // 非同期同期を裏で走らせつつ、即座に次の未分類へ切り替え
         applyRecordUpdate(rec, updatedFields, '');
         if (nextList.length > 0) {
           openEditModal(nextList[0].record_id);
@@ -1774,7 +1803,6 @@
       if (r._unsynced) badges.push('<span class="badge badge-off">未同期</span>');
       if (r.cal_status === 'PENDING') badges.push('<span class="badge badge-ai">AIカロリー待ち</span>');
 
-      // AI分類提案ボックス（ワンタップ承認ボタン付き）
       let aiSugHtml = '';
       if (isUnassigned && r.ai_cat_id) {
         const sugCat = state.categories.find(c => c.category_id === r.ai_cat_id && c.active);
@@ -2385,7 +2413,7 @@
         }
 
         persistLocal();
-        if (!state.userManuallyPicked && !state.hasUrlCatParam && !state.unassignedMode) {
+        if (!state.userManuallyPicked && !state.hasUrlCatParam) {
           applyAutoDefaultCategory(true);
         }
         renderAll();
