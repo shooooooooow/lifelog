@@ -61,9 +61,12 @@
 
     /* 3モード切り替えスイッチ（つぶやき ／ ライフログ ／ 体重・体脂肪） */
     .mode-switch {
+      position: sticky; top: 52px; z-index: 18;
       display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
       width: 100%; background: #e5e7eb; padding: 3px; border-radius: 11px;
       margin-bottom: 12px;
+      outline: 8px solid var(--bg);
+      box-shadow: 0 4px 10px rgba(244, 246, 249, 0.95);
     }
     .mode-switch button {
       border: none; background: transparent; border-radius: 8px;
@@ -1883,7 +1886,7 @@
             _unsynced: true
           };
           bodyLogsToUpsert.push(bLog);
-          normalizedSummary.push({ type: 'body', date: dStr, time: tStr, weight, body_fat: bodyFat, memo });
+          normalizedSummary.push({ type: 'body', log_id: bLog.log_id, date: dStr, time: tStr, weight, body_fat: bodyFat, memo });
         } else {
           const location = String(it.location || '').trim();
           const amtRaw = String(it.amount ?? '').trim();
@@ -1934,7 +1937,7 @@
           };
           recordsToAdd.push(rec);
           normalizedSummary.push({
-            type: 'record', date: dStr, time: tStr,
+            type: 'record', record_id: rec.record_id, date: dStr, time: tStr,
             category_id: rec.category_id, location, amount, calories, cal_note: calNote, memo
           });
         }
@@ -2124,28 +2127,64 @@
     async function deleteTweetItem(tweetId) {
       const t = state.tweetInbox.find(x => x.tweet_id === tweetId);
       if (!t) return false;
-      const preview = t.raw_text.length > 60 ? t.raw_text.slice(0, 60) + '…' : t.raw_text;
-      if (!confirm(`このつぶやきを削除しますか？\n\n「${preview}」`)) return false;
 
+      const linkedRecIds = (t.parsed_items || []).map(it => it && it.record_id).filter(Boolean);
+      const linkedBodyIds = (t.parsed_items || []).map(it => it && it.log_id).filter(Boolean);
+
+      const linkedParts = [];
+      if (linkedRecIds.length) linkedParts.push(`ライフログ ${linkedRecIds.length}件`);
+      if (linkedBodyIds.length) linkedParts.push(`体重・体脂肪 ${linkedBodyIds.length}件`);
+
+      const preview = t.raw_text.length > 60 ? t.raw_text.slice(0, 60) + '…' : t.raw_text;
+      const confirmMsg = linkedParts.length
+        ? `このつぶやきと、ここから登録された記録（${linkedParts.join('・')}）をまとめて削除しますか？\n\n「${preview}」`
+        : `このつぶやきを削除しますか？\n\n「${preview}」`;
+
+      if (!confirm(confirmMsg)) return false;
+
+      const recIdSet = new Set(linkedRecIds);
+      const bodyIdSet = new Set(linkedBodyIds);
+
+      // 紐づくライフログをローカルから連動削除
+      if (recIdSet.size) {
+        state.records = state.records.filter(r => !recIdSet.has(r.record_id));
+        state.queue = state.queue.filter(q => !recIdSet.has(q.record_id));
+        state.updateQueue = state.updateQueue.filter(u => !recIdSet.has(u.record_id));
+      }
+      // 紐づく体重・体脂肪をローカルから連動削除
+      if (bodyIdSet.size) {
+        state.bodyLogs = state.bodyLogs.filter(b => !bodyIdSet.has(b.log_id));
+        state.bodyUpsertQueue = state.bodyUpsertQueue.filter(q => !bodyIdSet.has(q.log_id));
+      }
+
+      // つぶやき本体をローカルから削除
       state.tweetInbox = state.tweetInbox.filter(x => x.tweet_id !== tweetId);
-      const wasUnsyncedOnly = state.tweetAddQueue.some(q => q.tweet_id === tweetId);
+      const wasUnsyncedAdd = state.tweetAddQueue.some(q => q.tweet_id === tweetId);
+      const wasUnsyncedDone = state.tweetCompleteQueue.some(q => q.tweet_id === tweetId);
       state.tweetAddQueue = state.tweetAddQueue.filter(q => q.tweet_id !== tweetId);
       state.tweetCompleteQueue = state.tweetCompleteQueue.filter(q => q.tweet_id !== tweetId);
 
-      if (!wasUnsyncedOnly && !state.tweetDeleteQueue.includes(tweetId)) {
+      const skipServerDelete = wasUnsyncedAdd || wasUnsyncedDone;
+      if (!skipServerDelete && !state.tweetDeleteQueue.includes(tweetId)) {
         state.tweetDeleteQueue.push(tweetId);
       }
 
       persistLocal();
+      renderLocationDatalist();
       renderRecentTweetList();
+      renderRecentList();
+      renderRecentBodyList();
+      updateBodyInputContext();
+      renderHistoryView();
+      renderBodyHistoryView();
       renderTweetHistoryView();
       updateUnassignedIndicators();
       updateSyncBadge();
 
-      if (!wasUnsyncedOnly) {
+      if (!skipServerDelete) {
         await flushTweetDeleteQueue();
       }
-      toast('つぶやきを削除しました');
+      toast(linkedParts.length ? `つぶやきと紐づく記録を削除しました` : 'つぶやきを削除しました');
       return true;
     }
 
