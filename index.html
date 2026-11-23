@@ -472,12 +472,46 @@
       max-width: 90vw; text-align: center;
     }
     .toast.show { opacity: 0.95; }
+    /* ヘッダー右側ボタングループ＆ジャーナルまとめモーダル */
+    .header-actions {
+      display: flex; align-items: center; gap: 6px;
+    }
+    .journal-pill {
+      font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px;
+      border: 1px solid #c4b5fd; background: var(--ai-bg); color: var(--ai);
+      cursor: pointer;
+    }
+    .journal-pill:active { opacity: 0.8; }
+    .journal-mode-bar {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 4px;
+      background: #e5e7eb; padding: 3px; border-radius: 10px; margin-bottom: 10px;
+    }
+    .journal-mode-bar button {
+      border: none; background: transparent; border-radius: 7px;
+      padding: 7px 6px; font-size: 12px; font-weight: 700; color: var(--muted);
+      cursor: pointer;
+    }
+    .journal-mode-bar button.active {
+      background: #fff; color: var(--ai); box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .journal-meta {
+      font-size: 11px; color: var(--muted); background: #f8fafc;
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: 7px 10px; margin-bottom: 10px; line-height: 1.5;
+    }
+    .journal-preview {
+      min-height: 190px; line-height: 1.6; font-size: 13px;
+      font-family: inherit; resize: vertical;
+    }
   </style>
 </head>
 <body>
   <header>
     <h1>マイライフログ</h1>
-    <div id="syncStatus" class="status-pill" onclick="syncAll(true)">未設定</div>
+    <div class="header-actions">
+      <button type="button" class="journal-pill" onclick="openJournalModal()">📖 まとめ</button>
+      <div id="syncStatus" class="status-pill" onclick="syncAll(true)">未設定</div>
+    </div>
   </header>
 
   <div id="toast" class="toast"></div>
@@ -627,6 +661,44 @@
         <button class="btn btn-danger" onclick="discardReviewingTweet()">このつぶやきを破棄</button>
         <button class="btn btn-sub" onclick="closeTweetReviewModal()">キャンセル</button>
       </div>
+    </div>
+  </div>
+  
+  <!-- 4. ジャーナル用まとめモーダル（差分抽出・共有・コピー） -->
+  <div id="journalModal" class="modal-backdrop" onclick="if (event.target === this) closeJournalModal();">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2>📖 ジャーナル用まとめ</h2>
+        <button class="modal-close" onclick="closeJournalModal()" aria-label="閉じる">×</button>
+      </div>
+
+      <div class="row-2" style="align-items:end; margin-bottom:10px;">
+        <div class="field" style="margin-bottom:0;">
+          <label for="journalDate">対象日</label>
+          <input id="journalDate" type="date" onchange="renderJournalPreview()" />
+        </div>
+        <button type="button" class="btn btn-sub btn-sm" style="height:41px; width:100%;" onclick="resetJournalCursorForDate()">
+          この日の出力済をリセット
+        </button>
+      </div>
+
+      <div class="journal-mode-bar" id="journalModeBar">
+        <button type="button" class="active" data-mode="diff" onclick="setJournalMode('diff')">前回の続き（差分）</button>
+        <button type="button" data-mode="all" onclick="setJournalMode('all')">1日分ぜんぶ</button>
+      </div>
+
+      <div id="journalMeta" class="journal-meta"></div>
+
+      <div class="field">
+        <label for="journalText">出力テキスト（共有・コピー前に編集できます）</label>
+        <textarea id="journalText" class="journal-preview" rows="9" placeholder="この条件に該当する記録がありません"></textarea>
+      </div>
+
+      <div class="row-2" style="margin-bottom:8px;">
+        <button id="btnJournalShare" type="button" class="btn btn-ai" onclick="shareJournalText()">📤 共有する</button>
+        <button id="btnJournalCopy" type="button" class="btn btn-primary" onclick="copyJournalText()">📋 コピーする</button>
+      </div>
+      <button type="button" class="btn btn-sub" onclick="closeJournalModal()">閉じる</button>
     </div>
   </div>
 
@@ -4658,6 +4730,252 @@
       return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
     }
     function escAttr(s) { return esc(s).replace(/\\/g, '\\\\'); }
+  // ====== ジャーナル用まとめ（前回の続き・1日分ぜんぶ・共有・コピー） ======
+    const JOURNAL_EXPORT_KEY = 'll_journal_exports_v1';
+    const journalState = {
+      mode: 'diff', // 'diff' | 'all'
+      lastLatestMs: 0,
+      hasContent: false
+    };
+
+    function loadJournalExports() {
+      try {
+        return JSON.parse(localStorage.getItem(JOURNAL_EXPORT_KEY) || '{}');
+      } catch (_) {
+        return {};
+      }
+    }
+
+    function saveJournalExportCursor(dateStr, cursorMs) {
+      const map = loadJournalExports();
+      map[dateStr] = Math.max(Number(map[dateStr] || 0), cursorMs);
+      // 直近60日分だけ保持して肥大化を防止
+      const keys = Object.keys(map).sort().slice(-60);
+      const pruned = {};
+      keys.forEach(k => { pruned[k] = map[k]; });
+      localStorage.setItem(JOURNAL_EXPORT_KEY, JSON.stringify(pruned));
+    }
+
+    function openJournalModal() {
+      const today = formatDateJst(new Date());
+      document.getElementById('journalDate').value = today;
+      journalState.mode = 'diff';
+      updateJournalModeButtons();
+      renderJournalPreview();
+      document.getElementById('journalModal').classList.add('open');
+    }
+
+    function closeJournalModal() {
+      document.getElementById('journalModal').classList.remove('open');
+    }
+
+    function setJournalMode(mode) {
+      journalState.mode = mode;
+      updateJournalModeButtons();
+      renderJournalPreview();
+    }
+
+    function updateJournalModeButtons() {
+      document.querySelectorAll('#journalModeBar button').forEach(b => {
+        b.classList.toggle('active', b.dataset.mode === journalState.mode);
+      });
+    }
+
+    function resetJournalCursorForDate() {
+      const dateStr = document.getElementById('journalDate').value;
+      if (!dateStr) return;
+      const map = loadJournalExports();
+      if (!map[dateStr]) return toast('この日の出力履歴はまだありません');
+      delete map[dateStr];
+      localStorage.setItem(JOURNAL_EXPORT_KEY, JSON.stringify(map));
+      renderJournalPreview();
+      toast(`${dateStr} の出力済カーソルをリセットしました`);
+    }
+
+    function formatHmFromMillis(ms) {
+      const d = new Date(ms);
+      if (Number.isNaN(d.getTime())) return '';
+      return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    }
+
+    function renderJournalPreview() {
+      const dateStr = document.getElementById('journalDate').value || formatDateJst(new Date());
+      const exportsMap = loadJournalExports();
+      const lastExportMs = Number(exportsMap[dateStr] || 0);
+      const isDiff = journalState.mode === 'diff' && lastExportMs > 0;
+
+      // 対象日のライフログを時刻昇順で取得
+      const dayRecordsAll = state.records
+        .filter(r => r.date === dateStr)
+        .sort((a, b) => toSortMillis(a) - toSortMillis(b));
+      const dayRecords = isDiff
+        ? dayRecordsAll.filter(r => toSortMillis(r) > lastExportMs)
+        : dayRecordsAll;
+
+      // 対象日の体重・体脂肪（同日上書きされた場合は更新時刻が新しくなるため差分にも入る）
+      const dayBodyAll = state.bodyLogs.filter(b => b.date === dateStr);
+      const dayBody = isDiff
+        ? dayBodyAll.filter(b => toSortMillis(b) > lastExportMs)
+        : dayBodyAll;
+
+      // 対象に含まれる最新タイムスタンプを控える
+      let maxMs = 0;
+      dayRecords.forEach(r => { maxMs = Math.max(maxMs, toSortMillis(r)); });
+      dayBody.forEach(b => { maxMs = Math.max(maxMs, toSortMillis(b)); });
+      journalState.lastLatestMs = maxMs;
+
+      const totalCount = dayRecords.length + dayBody.length;
+      journalState.hasContent = totalCount > 0;
+
+      // メタ情報表示
+      const metaEl = document.getElementById('journalMeta');
+      const lastLabel = lastExportMs > 0 ? `前回出力: ${formatHmFromMillis(lastExportMs)}` : 'この日の出力: 初回';
+      if (journalState.mode === 'diff') {
+        metaEl.innerHTML = `${esc(lastLabel)} ／ 抽出対象: <strong>${totalCount}件</strong>（前回の続き）`;
+      } else {
+        metaEl.innerHTML = `${esc(lastLabel)} ／ 抽出対象: <strong>${totalCount}件</strong>（1日分ぜんぶ）`;
+      }
+
+      const textEl = document.getElementById('journalText');
+      const shareBtn = document.getElementById('btnJournalShare');
+      const copyBtn = document.getElementById('btnJournalCopy');
+
+      if (!totalCount) {
+        textEl.value = '';
+        textEl.placeholder = isDiff
+          ? '前回出力以降の新しい記録はありません（「1日分ぜんぶ」に切り替えると全体を表示できます）'
+          : `${dateStr} の記録はまだありません`;
+        shareBtn.disabled = true;
+        copyBtn.disabled = true;
+        return;
+      }
+
+      shareBtn.disabled = false;
+      copyBtn.disabled = false;
+
+      // テキスト整形
+      const lines = [];
+      const [y, m, d] = dateStr.split('-');
+      const headerDate = `${y}/${Number(m)}/${Number(d)}`;
+      lines.push(isDiff ? `【${headerDate} 追記】` : `【${headerDate} の振り返り】`);
+
+      // 1. 体重・体脂肪
+      if (dayBody.length) {
+        const b = dayBody[dayBody.length - 1];
+        const parts = [];
+        if (b.weight != null) parts.push(`${b.weight.toFixed(1)}kg`);
+        if (b.body_fat != null) parts.push(`体脂肪 ${b.body_fat.toFixed(1)}%`);
+        if (b.memo) parts.push(`（${b.memo}）`);
+        lines.push(`⚖️ 体重：${parts.join(' / ')}`);
+      }
+
+      // 2. 行った場所（重複除外）
+      const locs = [...new Set(dayRecords.map(r => String(r.location || '').trim()).filter(Boolean))];
+      if (locs.length) {
+        lines.push(`📍 場所：${locs.join('、')}`);
+      }
+
+      // 3. 食事・気持ち・その他に分類
+      const foodRecs = [];
+      const moodRecs = [];
+      const otherRecs = [];
+      const catFoodMap = Object.fromEntries(state.categories.map(c => [c.category_id, Boolean(c.is_food)]));
+
+      dayRecords.forEach(r => {
+        const isFood = catFoodMap[r.category_id] || r.cat1 === '食事' || r.calories != null;
+        const isMood = r.cat1 === '気持ち';
+        if (isMood) moodRecs.push(r);
+        else if (isFood) foodRecs.push(r);
+        else otherRecs.push(r);
+      });
+
+      if (foodRecs.length) {
+        let calSum = 0;
+        const foodLines = foodRecs.map(r => {
+          if (r.calories != null) calSum += r.calories;
+          const t = extractDateAndTime(r).time;
+          const loc = r.location ? `@${r.location} ` : '';
+          const memo = r.memo || r.cat3 || '食事';
+          const cal = r.calories != null ? ` (${r.calories}kcal)` : '';
+          return `・${t ? t + ' ' : ''}${loc}${memo}${cal}`;
+        });
+        lines.push('');
+        lines.push(`🍽️ 食事${calSum > 0 ? `（計 ${Math.round(calSum).toLocaleString()}kcal）` : ''}`);
+        lines.push(...foodLines);
+      }
+
+      if (otherRecs.length) {
+        const otherLines = otherRecs.map(r => {
+          const t = extractDateAndTime(r).time;
+          const loc = r.location ? `@${r.location} ` : '';
+          const memo = r.memo || r.cat3 || r.cat1 || '記録';
+          const amt = r.amount != null ? ` ¥${r.amount.toLocaleString()}` : '';
+          return `・${t ? t + ' ' : ''}${loc}${memo}${amt}`;
+        });
+        lines.push('');
+        lines.push('📝 できごと・支出');
+        lines.push(...otherLines);
+      }
+
+      if (moodRecs.length) {
+        lines.push('');
+        lines.push('💭 気持ち');
+        moodRecs.forEach(r => {
+          const t = extractDateAndTime(r).time;
+          const head = t ? `[${t}] ` : '';
+          lines.push(`${head}${r.memo || ''}`);
+        });
+      }
+
+      textEl.value = lines.join('\n');
+    }
+
+    function markCurrentJournalExported() {
+      const dateStr = document.getElementById('journalDate').value || formatDateJst(new Date());
+      const cursorMs = Math.max(Date.now(), journalState.lastLatestMs || 0);
+      saveJournalExportCursor(dateStr, cursorMs);
+      renderJournalPreview();
+    }
+
+    async function copyJournalText() {
+      const text = document.getElementById('journalText').value.trim();
+      if (!text) return toast('コピーする内容がありません');
+      try {
+        await navigator.clipboard.writeText(text);
+        markCurrentJournalExported();
+        toast('コピーしました（次回は続きから抽出されます）');
+      } catch (_) {
+        const ta = document.getElementById('journalText');
+        ta.select();
+        document.execCommand('copy');
+        markCurrentJournalExported();
+        toast('コピーしました');
+      }
+    }
+
+    async function shareJournalText() {
+      const text = document.getElementById('journalText').value.trim();
+      if (!text) return toast('共有する内容がありません');
+      const dateStr = document.getElementById('journalDate').value || formatDateJst(new Date());
+
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: `${dateStr} のライフログ`,
+            text
+          });
+          markCurrentJournalExported();
+          toast('共有しました（次回は続きから抽出されます）');
+        } catch (err) {
+          // ユーザーキャンセル時は何もしない
+          if (err && err.name !== 'AbortError') {
+            await copyJournalText();
+          }
+        }
+      } else {
+        await copyJournalText();
+      }
+    }
   </script>
 </body>
 </html>
