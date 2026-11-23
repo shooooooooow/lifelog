@@ -123,7 +123,7 @@
     /* フォーム */
     .field { margin-bottom: 12px; }
     .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; font-weight: 600; }
-    input[type="text"], input[type="number"], input[type="url"], input[type="password"], input[type="time"], input[type="search"], textarea, select {
+    input[type="text"], input[type="number"], input[type="url"], input[type="password"], input[type="date"], input[type="time"], input[type="search"], textarea, select {
       width: 100%; padding: 10px 11px; font-size: 15px; border: 1.5px solid var(--border);
       border-radius: 10px; background: #fff; color: var(--text); outline: none;
     }
@@ -139,6 +139,16 @@
     .btn-sub { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
     .btn-sm { width: auto; padding: 6px 12px; font-size: 12px; border-radius: 8px; }
     .btn-danger { background: #fee2e2; color: var(--danger); }
+
+    /* 新規入力時の日時指定バー */
+    .dt-bar {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      background: #f8fafc; border: 1px solid var(--border); border-radius: 10px;
+      padding: 8px 10px; margin-bottom: 10px; font-size: 12px; color: var(--muted);
+    }
+    .dt-bar strong { color: var(--text); }
+    .dt-fields { display: none; margin-bottom: 12px; }
+    .dt-fields.open { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
     .item-actions {
       display: flex; justify-content: flex-end; gap: 5px; margin-top: 5px;
@@ -228,6 +238,7 @@
     }
     .badge-ai { background: #fef3c7; color: var(--warn); }
     .badge-off { background: #e5e7eb; color: #4b5563; }
+    .badge-ok { background: #d1fae5; color: var(--success); }
 
     /* ボトムナビ（5タブ対応） */
     nav.bottom-nav {
@@ -269,7 +280,17 @@
         <button class="modal-close" onclick="closeEditModal()" aria-label="閉じる">×</button>
       </div>
       <input type="hidden" id="editRecId" />
-      <div id="editRecMeta" style="font-size:12px; color:var(--muted); margin-bottom:10px;"></div>
+
+      <div class="row-2">
+        <div class="field">
+          <label for="editRecDate">記録日</label>
+          <input id="editRecDate" type="date" />
+        </div>
+        <div class="field">
+          <label for="editRecTime">時刻</label>
+          <input id="editRecTime" type="time" />
+        </div>
+      </div>
 
       <div class="field">
         <label for="editRecCat">分類</label>
@@ -279,17 +300,17 @@
       <div class="row-2">
         <div class="field">
           <label for="editRecAmt">金額（円）</label>
-          <input id="editRecAmt" type="number" inputmode="numeric" placeholder="空欄可" />
+          <input id="editRecAmt" type="number" inputmode="numeric" autocomplete="off" placeholder="空欄可" />
         </div>
         <div class="field">
           <label for="editRecCal">カロリー（kcal）</label>
-          <input id="editRecCal" type="number" inputmode="numeric" placeholder="空欄ならAI再計算" />
+          <input id="editRecCal" type="number" inputmode="numeric" autocomplete="off" placeholder="空欄ならAI再計算" />
         </div>
       </div>
 
       <div class="field">
         <label for="editRecMemo">内容メモ</label>
-        <textarea id="editRecMemo" rows="3" placeholder="メモを入力"></textarea>
+        <textarea id="editRecMemo" rows="3" autocomplete="off" placeholder="メモを入力"></textarea>
       </div>
 
       <div class="row-2">
@@ -328,17 +349,32 @@
         <div class="row-2">
           <div class="field">
             <label for="inpAmount">金額（円）</label>
-            <input id="inpAmount" type="number" inputmode="numeric" placeholder="例: 950" />
+            <input id="inpAmount" type="number" inputmode="numeric" autocomplete="off" placeholder="例: 950" />
           </div>
           <div class="field" id="calFieldWrap">
             <label for="inpCal">カロリー（kcal）</label>
-            <input id="inpCal" type="number" inputmode="numeric" placeholder="空欄ならAI自動計算" />
+            <input id="inpCal" type="number" inputmode="numeric" autocomplete="off" placeholder="空欄ならAI自動計算" />
           </div>
         </div>
 
         <div class="field">
           <label for="inpMemo">内容メモ（食べ物・気持ちなど）</label>
-          <textarea id="inpMemo" rows="2" placeholder="例: 豚骨ラーメン 麺少なめ / 会議がスムーズに終わった"></textarea>
+          <textarea id="inpMemo" rows="2" autocomplete="off" placeholder="例: 豚骨ラーメン 麺少なめ / 会議がスムーズに終わった"></textarea>
+        </div>
+
+        <div class="dt-bar">
+          <span>🕒 記録日時: <strong id="inpDtStatus">現在時刻（自動）</strong></span>
+          <button type="button" id="inpDtToggleBtn" class="btn btn-sub btn-sm" onclick="toggleCustomDateTime()">日時を指定</button>
+        </div>
+        <div id="inpDtFields" class="dt-fields">
+          <div class="field" style="margin-bottom:0;">
+            <label for="inpDate">記録日</label>
+            <input id="inpDate" type="date" onchange="updateCustomDtLabel()" />
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label for="inpTime">時刻</label>
+            <input id="inpTime" type="time" onchange="updateCustomDtLabel()" />
+          </div>
         </div>
 
         <button class="btn btn-primary" onclick="submitRecord()">記録する</button>
@@ -386,7 +422,7 @@
           </div>
           <div class="field" style="margin-bottom:0;">
             <label for="histKeyword">メモ検索</label>
-            <input id="histKeyword" type="search" placeholder="キーワード" oninput="onHistoryFilterChange()" />
+            <input id="histKeyword" type="search" autocomplete="off" placeholder="キーワード" oninput="onHistoryFilterChange()" />
           </div>
         </div>
       </div>
@@ -455,16 +491,16 @@
         <p class="section-title" id="catFormTitle">➕ 分類を追加 / 編集</p>
         <input type="hidden" id="editCatId" />
         <div class="row-2">
-          <div class="field"><label>大分類 *</label><input id="fCat1" type="text" placeholder="例: 食事" /></div>
-          <div class="field"><label>中分類 *</label><input id="fCat2" type="text" placeholder="例: 昼食" /></div>
+          <div class="field"><label>大分類 *</label><input id="fCat1" type="text" autocomplete="off" placeholder="例: 食事" /></div>
+          <div class="field"><label>中分類 *</label><input id="fCat2" type="text" autocomplete="off" placeholder="例: 昼食" /></div>
         </div>
         <div class="row-2">
-          <div class="field"><label>小分類 *</label><input id="fCat3" type="text" placeholder="例: 外食" /></div>
-          <div class="field"><label>ショートカット名（任意）</label><input id="fShortcut" type="text" placeholder="例: 🍜 ラーメン" /></div>
+          <div class="field"><label>小分類 *</label><input id="fCat3" type="text" autocomplete="off" placeholder="例: 外食" /></div>
+          <div class="field"><label>ショートカット名（任意）</label><input id="fShortcut" type="text" autocomplete="off" placeholder="例: 🍜 ラーメン" /></div>
         </div>
         <div class="row-2">
-          <div class="field"><label>固定カロリー（任意）</label><input id="fFixedKcal" type="number" placeholder="空欄ならAI計算" /></div>
-          <div class="field"><label>既定金額（任意）</label><input id="fDefAmt" type="number" placeholder="例: 420" /></div>
+          <div class="field"><label>固定カロリー（任意）</label><input id="fFixedKcal" type="number" autocomplete="off" placeholder="空欄ならAI計算" /></div>
+          <div class="field"><label>既定金額（任意）</label><input id="fDefAmt" type="number" autocomplete="off" placeholder="例: 420" /></div>
         </div>
         <div class="row-2" style="align-items:center; margin-bottom:12px;">
           <label style="font-size:13px; display:flex; align-items:center; gap:6px;">
@@ -539,16 +575,16 @@
       <div class="card">
         <p class="section-title">⚙️ GAS 接続設定（端末ローカル保存）</p>
         <div class="field">
-          <label>GAS Webアプリ URL</label>
-          <input id="setGasUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec" />
+          <label for="setGasUrl">GAS Webアプリ URL</label>
+          <input id="setGasUrl" type="url" autocomplete="off" placeholder="https://script.google.com/macros/s/.../exec" />
         </div>
         <div class="field">
-          <label>APIトークン（GASスクリプトプロパティの API_TOKEN）</label>
-          <input id="setToken" type="password" placeholder="自分で設定した合言葉" />
+          <label for="setToken">APIトークン（GASスクリプトプロパティの API_TOKEN）<span id="tokenStatusBadge"></span></label>
+          <input id="setToken" type="password" autocomplete="new-password" placeholder="自分で設定した合言葉" disabled />
         </div>
         <div class="field">
-          <label>1日の目標カロリー（グラフ基準線）</label>
-          <input id="setTargetCal" type="number" value="2000" />
+          <label for="setTargetCal">1日の目標カロリー（グラフ基準線）</label>
+          <input id="setTargetCal" type="number" autocomplete="off" value="2000" />
         </div>
         <button class="btn btn-primary" onclick="saveSettings()">設定を保存して同期</button>
       </div>
@@ -614,6 +650,7 @@
       autoRulesDirty: localStorage.getItem(KEYS.autoRulesDirty) === '1',
       holidaysCache: JSON.parse(localStorage.getItem(KEYS.holidays) || '{"fetchedAt":0,"dates":{}}'),
       selCat1: '', selCat2: '', selCatId: '',
+      useCustomDateTime: false,
       histFilter: { cat1: '', cat2: '', cat3: '', period: 'all', keyword: '' },
       histLimit: 50,
       userManuallyPicked: false,
@@ -649,8 +686,8 @@
       });
 
       document.getElementById('setGasUrl').value = state.settings.gasUrl || '';
-      document.getElementById('setToken').value = state.settings.token || '';
       document.getElementById('setTargetCal').value = state.settings.targetCal || 2000;
+      refreshTokenFieldUI();
 
       const params = new URLSearchParams(location.search);
       const urlCat = params.get('cat');
@@ -680,7 +717,7 @@
         if (document.visibilityState === 'visible' && !state.hasUrlCatParam) {
           const amt = document.getElementById('inpAmount').value.trim();
           const memo = document.getElementById('inpMemo').value.trim();
-          if (!amt && !memo) {
+          if (!amt && !memo && !state.useCustomDateTime) {
             state.userManuallyPicked = false;
             applyAutoDefaultCategory(false);
           }
@@ -688,12 +725,36 @@
       });
     });
 
+    function refreshTokenFieldUI() {
+      const inp = document.getElementById('setToken');
+      const badge = document.getElementById('tokenStatusBadge');
+      const hasToken = Boolean(state.settings.token);
+      if (hasToken) {
+        badge.innerHTML = ' <span class="badge badge-ok">設定済</span>';
+        inp.placeholder = '設定済み（変更するときだけ入力）';
+      } else {
+        badge.innerHTML = ' <span class="badge badge-off">未設定</span>';
+        inp.placeholder = '自分で設定した合言葉を入力';
+      }
+      inp.value = '';
+    }
+
     function switchView(name) {
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
       document.getElementById('view-' + name).classList.add('active');
       document.querySelectorAll('.bottom-nav button').forEach(b => {
         b.classList.toggle('active', b.dataset.view === name);
       });
+
+      const tokenInp = document.getElementById('setToken');
+      if (name === 'settings') {
+        tokenInp.disabled = false;
+        refreshTokenFieldUI();
+      } else {
+        tokenInp.value = '';
+        tokenInp.disabled = true;
+      }
+
       if (name === 'history') renderHistoryView();
       if (name === 'charts') renderCharts();
       if (name === 'categories') renderCategoryManager();
@@ -912,7 +973,33 @@
       await pushAutoRulesToServer('ルールを削除してシートに反映しました');
     }
 
-    // ====== 1. 入力・ショートカット・3階層連動・記録編集/削除 ======
+    // ====== 1. 入力・ショートカット・3階層連動・日時指定・記録編集/削除 ======
+    function toggleCustomDateTime(forceOff = false) {
+      state.useCustomDateTime = forceOff ? false : !state.useCustomDateTime;
+      const fields = document.getElementById('inpDtFields');
+      const btn = document.getElementById('inpDtToggleBtn');
+      if (state.useCustomDateTime) {
+        const now = new Date();
+        document.getElementById('inpDate').value = formatDateJst(now);
+        document.getElementById('inpTime').value =
+          `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        fields.classList.add('open');
+        btn.textContent = '現在時刻に戻す';
+        updateCustomDtLabel();
+      } else {
+        fields.classList.remove('open');
+        btn.textContent = '日時を指定';
+        document.getElementById('inpDtStatus').textContent = '現在時刻（自動）';
+      }
+    }
+
+    function updateCustomDtLabel() {
+      if (!state.useCustomDateTime) return;
+      const d = document.getElementById('inpDate').value;
+      const t = document.getElementById('inpTime').value || '00:00';
+      document.getElementById('inpDtStatus').textContent = d ? `${d} ${t}` : '日付を選択';
+    }
+
     function selectByCategoryId(catId, isManual = true) {
       const cat = state.categories.find(c => c.category_id === catId);
       if (!cat) return;
@@ -1012,14 +1099,26 @@
         return toast('金額またはメモを入力してください');
       }
 
-      const now = new Date();
-      const dateStr = formatDateJst(now);
+      let dateStr;
+      let timestampStr;
+      if (state.useCustomDateTime) {
+        const customDate = document.getElementById('inpDate').value;
+        const customTime = document.getElementById('inpTime').value || '00:00';
+        if (!customDate) return toast('記録日を選択してください');
+        dateStr = customDate;
+        timestampStr = `${customDate} ${customTime}:00`;
+      } else {
+        const now = new Date();
+        dateStr = formatDateJst(now);
+        timestampStr = now.toISOString();
+      }
+
       const isMobile = /iPhone|Android/i.test(navigator.userAgent);
       const calories = calRaw !== '' ? Number(calRaw) : (cat.is_food && cat.fixed_kcal != null ? cat.fixed_kcal : null);
 
       const rec = {
         record_id: crypto.randomUUID ? crypto.randomUUID() : ('r_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7)),
-        timestamp: now.toISOString(),
+        timestamp: timestampStr,
         date: dateStr,
         category_id: cat.category_id,
         cat1: cat.cat1, cat2: cat.cat2, cat3: cat.cat3,
@@ -1039,6 +1138,7 @@
       document.getElementById('inpAmount').value = cat.default_amount ?? '';
       document.getElementById('inpCal').value = cat.fixed_kcal ?? '';
       document.getElementById('inpMemo').value = '';
+      if (state.useCustomDateTime) toggleCustomDateTime(true);
 
       renderRecentList();
       renderHistoryView();
@@ -1052,7 +1152,10 @@
       if (!rec) return;
 
       document.getElementById('editRecId').value = rec.record_id;
-      document.getElementById('editRecMeta').textContent = `記録日時: ${formatDateTime(rec)}`;
+
+      const dt = extractDateAndTime(rec);
+      document.getElementById('editRecDate').value = dt.date || formatDateJst(new Date());
+      document.getElementById('editRecTime').value = dt.time || '00:00';
 
       const sel = document.getElementById('editRecCat');
       const cats = activeCategories();
@@ -1080,6 +1183,10 @@
       const recordId = document.getElementById('editRecId').value;
       const rec = state.records.find(r => r.record_id === recordId);
       if (!rec) return closeEditModal();
+
+      const newDate = document.getElementById('editRecDate').value;
+      const newTime = document.getElementById('editRecTime').value || '00:00';
+      if (!newDate) return toast('記録日を入力してください');
 
       const newCatId = document.getElementById('editRecCat').value;
       const cat = state.categories.find(c => c.category_id === newCatId);
@@ -1112,6 +1219,8 @@
 
       const updatedFields = {
         record_id: recordId,
+        date: newDate,
+        timestamp: `${newDate} ${newTime}:00`,
         category_id: newCatId || rec.category_id,
         cat1: cat ? cat.cat1 : rec.cat1,
         cat2: cat ? cat.cat2 : rec.cat2,
@@ -1207,8 +1316,8 @@
     function toSortMillis(rec) {
       const ts = String(rec.timestamp || '').trim();
       if (ts) {
-        const normalized = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(ts)
-          ? ts.replace(' ', 'T') + '+09:00'
+        const normalized = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}(?::\d{2})?$/.test(ts)
+          ? ts.replace(' ', 'T') + (ts.length === 16 ? ':00+09:00' : '+09:00')
           : ts;
         const parsed = Date.parse(normalized);
         if (!Number.isNaN(parsed)) return parsed;
@@ -1217,21 +1326,26 @@
       return Number.isNaN(d) ? 0 : d;
     }
 
-    function formatDateTime(rec) {
+    function extractDateAndTime(rec) {
       const ts = String(rec.timestamp || '').trim();
-      const jstMatch = ts.match(/^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2})/);
-      if (jstMatch) {
-        return `${jstMatch[1]} ${jstMatch[2]}`;
+      const m = ts.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})/);
+      if (m && !ts.endsWith('Z')) {
+        return { date: m[1], time: m[2], hasTime: true };
       }
       if (ts) {
         const d = new Date(ts);
         if (!Number.isNaN(d.getTime())) {
           const hh = String(d.getHours()).padStart(2, '0');
           const mm = String(d.getMinutes()).padStart(2, '0');
-          return `${formatDateJst(d)} ${hh}:${mm}`;
+          return { date: formatDateJst(d), time: `${hh}:${mm}`, hasTime: true };
         }
       }
-      return rec.date || '';
+      return { date: rec.date || '', time: '', hasTime: false };
+    }
+
+    function formatDateTime(rec) {
+      const info = extractDateAndTime(rec);
+      return info.hasTime ? `${info.date} ${info.time}` : info.date;
     }
 
     function renderRecordRowHtml(r) {
@@ -1657,12 +1771,14 @@
 
     // ====== 5. 設定・GAS通信・同期 ======
     function saveSettings() {
+      const inputToken = document.getElementById('setToken').value.trim();
       state.settings = {
         gasUrl: document.getElementById('setGasUrl').value.trim(),
-        token: document.getElementById('setToken').value.trim(),
+        token: inputToken !== '' ? inputToken : (state.settings.token || ''),
         targetCal: Number(document.getElementById('setTargetCal').value || 2000)
       };
       localStorage.setItem(KEYS.settings, JSON.stringify(state.settings));
+      refreshTokenFieldUI();
       syncAll(true);
     }
 
