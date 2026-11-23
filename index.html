@@ -158,8 +158,11 @@
     .cand-field label {
       display: block; font-size: 10px; font-weight: 700; color: var(--muted); margin-bottom: 2px;
     }
-    .cand-card input, .cand-card select {
+    .cand-card input, .cand-card select, .cand-card textarea {
       padding: 7px 9px; font-size: 13px; border-radius: 8px;
+    }
+    .cand-card textarea {
+      line-height: 1.45; resize: vertical;
     }
     .cand-add-row {
       display: flex; gap: 6px; margin-bottom: 10px;
@@ -427,6 +430,7 @@
       display: inline-block; font-size: 10px; padding: 2px 6px; border-radius: 6px;
       background: var(--primary-bg); color: var(--primary); font-weight: 600; margin-right: 4px;
     }
+    .badge-loc { background: #f1f5f9; color: #334155; font-weight: 700; border: 1px solid #cbd5e1; }
     .badge-teal { background: var(--l2-bg); color: var(--l2); font-weight: 700; }
     .badge-ready { background: var(--ai-bg); color: var(--ai); font-weight: 700; }
     .badge-unassigned { background: #fef3c7; color: #b45309; font-weight: 700; }
@@ -475,6 +479,9 @@
 
   <div id="toast" class="toast"></div>
 
+  <!-- 過去の場所入力補完用 datalist -->
+  <datalist id="locationHistoryList"></datalist>
+
   <!-- 1. ライフログ記録編集モーダル -->
   <div id="editModal" class="modal-backdrop" onclick="if (event.target === this) closeEditModal();">
     <div class="modal-card">
@@ -512,6 +519,11 @@
         </div>
       </div>
 
+      <div class="field">
+        <label for="editRecLocation">📍 場所（店名・居酒屋・施設など・任意）</label>
+        <input id="editRecLocation" type="text" list="locationHistoryList" autocomplete="off" placeholder="例: 鳥貴族 / スタバ / セブンイレブン" />
+      </div>
+
       <div class="row-2">
         <div class="field">
           <label for="editRecAmt">金額（円）</label>
@@ -525,7 +537,7 @@
 
       <div class="field">
         <label for="editRecMemo">内容メモ</label>
-        <textarea id="editRecMemo" rows="2" autocomplete="off" placeholder="メモを入力"></textarea>
+        <textarea id="editRecMemo" rows="3" autocomplete="off" placeholder="メモを入力"></textarea>
       </div>
 
       <button id="btnSaveAndNext" class="btn btn-success" style="margin-bottom:8px; display:none;" onclick="saveEditedRecord(true)">
@@ -643,12 +655,12 @@
       <div id="inputTweetWrap">
         <div class="card">
           <div class="field">
-            <label for="inpTweetText">今の出来事・食事・支出・体重・気持ちをそのまま入力</label>
+            <label for="inpTweetText">今の出来事・食事・お店・支出・体重・気持ちをそのまま入力</label>
             <textarea id="inpTweetText" class="tweet-textarea" rows="3" autocomplete="off"
-              placeholder="例: 今朝68.2kg体脂肪18.1%。昼に豚骨ラーメン麺少なめ950円食べた。午後の会議がスムーズに終わって気分いい！"></textarea>
+              placeholder="例: 今朝68.2kg体脂肪18.1%。鳥貴族で焼き鳥とビール4200円。今週のプロジェクトが無事に終わって本当にほっとした！"></textarea>
           </div>
           <div class="tweet-tip">
-            💡 1つの文章に複数ジャンルが混ざっていても自動で分割します（「今朝」「昨日の夜」などの日時も自動解釈）。
+            💡 複数ジャンルや店名・日時を自動抽出します。気持ちの文章は要約せずそのまま残ります。
           </div>
 
           <!-- 投稿基準日時の指定 -->
@@ -704,10 +716,16 @@
           <!-- 1. 内容メモ -->
           <div class="field">
             <label for="inpMemo">内容メモ（食べ物・買ったもの・気持ちなど）</label>
-            <textarea id="inpMemo" rows="2" autocomplete="off" placeholder="例: 豚骨ラーメン 麺少なめ / スタバ ラテ / 会議がスムーズに終わった"></textarea>
+            <textarea id="inpMemo" rows="2" autocomplete="off" placeholder="例: 豚骨ラーメン 麺少なめ / ラテ / 会議がスムーズに終わった"></textarea>
           </div>
 
-          <!-- 2. 金額・カロリー -->
+          <!-- 2. 場所（任意・過去入力から補完） -->
+          <div class="field">
+            <label for="inpLocation">📍 場所（店名・居酒屋・施設など・任意）</label>
+            <input id="inpLocation" type="text" list="locationHistoryList" autocomplete="off" placeholder="例: 鳥貴族 / スタバ / スーパー / Amazon" />
+          </div>
+
+          <!-- 3. 金額・カロリー -->
           <div class="row-2">
             <div class="field">
               <label for="inpAmount">金額（円）</label>
@@ -719,7 +737,7 @@
             </div>
           </div>
 
-          <!-- 3. 分類（デフォルトは「あとで分類」で折りたたみ） -->
+          <!-- 4. 分類（デフォルトは「あとで分類」で折りたたみ） -->
           <div id="selectedPath" class="selected-path"></div>
 
           <div id="catPickerWrap" style="display:none;">
@@ -744,7 +762,7 @@
             </div>
           </div>
 
-          <!-- 4. 日時指定 -->
+          <!-- 5. 日時指定 -->
           <div class="dt-bar">
             <span>🕒 記録日時: <strong id="inpDtStatus">現在時刻（自動）</strong></span>
             <button type="button" id="inpDtToggleBtn" class="btn btn-sub btn-sm" onclick="toggleCustomDateTime()">日時を指定</button>
@@ -869,8 +887,8 @@
               </select>
             </div>
             <div class="field" style="margin-bottom:0;">
-              <label for="histKeyword">メモ検索</label>
-              <input id="histKeyword" type="search" autocomplete="off" placeholder="キーワード" oninput="onHistoryFilterChange()" />
+              <label for="histKeyword">メモ・場所検索</label>
+              <input id="histKeyword" type="search" autocomplete="off" placeholder="メモ・店名・場所など" oninput="onHistoryFilterChange()" />
             </div>
           </div>
         </div>
@@ -1317,7 +1335,8 @@
           if (!state.hasUrlCatParam) {
             const amt = document.getElementById('inpAmount').value.trim();
             const memo = document.getElementById('inpMemo').value.trim();
-            if (!amt && !memo && !state.useCustomDateTime) {
+            const loc = document.getElementById('inpLocation').value.trim();
+            if (!amt && !memo && !loc && !state.useCustomDateTime) {
               state.unassignedMode = true;
               state.userManuallyPicked = false;
               applyAutoDefaultCategory(true);
@@ -1621,6 +1640,7 @@
           date: it.date || defDate,
           time: it.time || defTime,
           category_id: it.category_id || UNASSIGNED_ID,
+          location: it.location || '',
           amount: it.amount != null ? Number(it.amount) : '',
           calories: it.calories != null ? Number(it.calories) : '',
           cal_note: it.cal_note || '',
@@ -1715,6 +1735,7 @@
 
           const selectedCat = cats.find(c => c.category_id === item.category_id);
           const selVal = selectedCat ? selectedCat.category_id : UNASSIGNED_ID;
+          const memoRows = (item.memo && item.memo.length > 36) ? 3 : 2;
           return `
             <div class="cand-card type-record">
               <div class="cand-head">
@@ -1727,6 +1748,12 @@
                 <select onchange="updateCandidateField('${scope}', ${idx}, 'category_id', this.value, true)">
                   ${catOptionsBase.replace(`value="${escAttr(selVal)}"`, `value="${escAttr(selVal)}" selected`)}
                 </select>
+              </div>
+              <div class="cand-field">
+                <label>📍 場所（店名・居酒屋・施設など・任意）</label>
+                <input type="text" list="locationHistoryList" value="${escAttr(item.location || '')}"
+                       placeholder="例: 鳥貴族 / スタバ / セブンイレブン"
+                       oninput="updateCandidateField('${scope}', ${idx}, 'location', this.value, false)" />
               </div>
               <div class="cand-grid-2">
                 <div class="cand-field">
@@ -1753,8 +1780,8 @@
               </div>
               <div class="cand-field">
                 <label>内容メモ</label>
-                <input type="text" value="${escAttr(item.memo)}" placeholder="内容メモ"
-                       oninput="updateCandidateField('${scope}', ${idx}, 'memo', this.value, false)" />
+                <textarea rows="${memoRows}" placeholder="内容メモ"
+                          oninput="updateCandidateField('${scope}', ${idx}, 'memo', this.value, false)">${esc(item.memo)}</textarea>
               </div>
             </div>
           `;
@@ -1797,7 +1824,7 @@
       if (type === 'body') {
         draft.items.push({ type: 'body', date: d, time: t, weight: '', body_fat: '', memo: '', reason: '' });
       } else {
-        draft.items.push({ type: 'record', date: d, time: t, category_id: UNASSIGNED_ID, amount: '', calories: '', cal_note: '', memo: '', reason: '' });
+        draft.items.push({ type: 'record', date: d, time: t, category_id: UNASSIGNED_ID, location: '', amount: '', calories: '', cal_note: '', memo: '', reason: '' });
       }
       renderCandidateCards(scope);
     }
@@ -1858,6 +1885,7 @@
           bodyLogsToUpsert.push(bLog);
           normalizedSummary.push({ type: 'body', date: dStr, time: tStr, weight, body_fat: bodyFat, memo });
         } else {
+          const location = String(it.location || '').trim();
           const amtRaw = String(it.amount ?? '').trim();
           const calRaw = String(it.calories ?? '').trim();
           const amount = amtRaw !== '' ? Math.round(Number(amtRaw)) : null;
@@ -1870,8 +1898,8 @@
             calories = Math.round(Number(cat.fixed_kcal));
           }
 
-          if (!memo && amount === null && calories === null) {
-            toast(`${i + 1}番目のカード：メモ・金額・カロリーのいずれかを入力してください`);
+          if (!memo && !location && amount === null && calories === null) {
+            toast(`${i + 1}番目のカード：メモ・場所・金額・カロリーのいずれかを入力してください`);
             return null;
           }
 
@@ -1892,6 +1920,7 @@
             cat1: isUnassigned ? '未分類' : cat.cat1,
             cat2: isUnassigned ? '未分類' : cat.cat2,
             cat3: isUnassigned ? '未分類' : cat.cat3,
+            location,
             amount,
             memo,
             calories,
@@ -1906,7 +1935,7 @@
           recordsToAdd.push(rec);
           normalizedSummary.push({
             type: 'record', date: dStr, time: tStr,
-            category_id: rec.category_id, amount, calories, cal_note: calNote, memo
+            category_id: rec.category_id, location, amount, calories, cal_note: calNote, memo
           });
         }
       }
@@ -1924,7 +1953,6 @@
     }
 
     async function executeTweetCommit(payload) {
-      // 1. ローカルの records / bodyLogs / tweetInbox を即時更新
       payload.records.forEach(r => state.records.push(r));
       payload.body_logs.forEach(b => {
         state.bodyLogs = state.bodyLogs.filter(x => x.log_id !== b.log_id && x.date !== b.date);
@@ -1951,13 +1979,13 @@
         });
       }
 
-      // 同じ tweet_id が未送信追加キューにあれば除去（complete_tweet 側で DONE 作成まで完結）
       state.tweetAddQueue = state.tweetAddQueue.filter(q => q.tweet_id !== payload.tweet_id);
       state.tweetDeleteQueue = state.tweetDeleteQueue.filter(id => id !== payload.tweet_id);
       state.tweetCompleteQueue = state.tweetCompleteQueue.filter(q => q.tweet_id !== payload.tweet_id);
       state.tweetCompleteQueue.push(payload);
 
       persistLocal();
+      renderLocationDatalist();
       renderRecentTweetList();
       renderRecentList();
       renderRecentBodyList();
@@ -1999,7 +2027,7 @@
       const items = normalizeCandidateList(
         (t.parsed_items && t.parsed_items.length)
           ? t.parsed_items
-          : [{ type: 'record', date: t.date, time: extractDateAndTime(t).time || '12:00', category_id: UNASSIGNED_ID, memo: t.raw_text }],
+          : [{ type: 'record', date: t.date, time: extractDateAndTime(t).time || '12:00', category_id: UNASSIGNED_ID, location: '', memo: t.raw_text }],
         t.date,
         t.timestamp
       );
@@ -2646,7 +2674,7 @@
 
       document.getElementById('histBodyLoadMoreWrap').style.display = filtered.length > shown.length ? 'block' : 'none';
     }
-// ====== 共通ヘルパー ======
+// ====== 共通ヘルパー・場所補完リスト ======
     function refreshTokenFieldUI() {
       const inp = document.getElementById('setToken');
       const badge = document.getElementById('tokenStatusBadge');
@@ -2670,6 +2698,27 @@
       el.textContent = msg;
       el.classList.add('show');
       setTimeout(() => el.classList.remove('show'), 2400);
+    }
+
+    function renderLocationDatalist() {
+      const el = document.getElementById('locationHistoryList');
+      if (!el) return;
+      const freqMap = new Map();
+      [...state.records]
+        .sort((a, b) => toSortMillis(b) - toSortMillis(a))
+        .forEach(r => {
+          const loc = String(r.location || '').trim();
+          if (!loc) return;
+          const prev = freqMap.get(loc);
+          if (prev) prev.count++;
+          else freqMap.set(loc, { count: 1, latest: toSortMillis(r) });
+        });
+
+      const sortedLocs = [...freqMap.entries()]
+        .sort((a, b) => (b[1].count - a[1].count) || (b[1].latest - a[1].latest))
+        .slice(0, 60)
+        .map(([loc]) => `<option value="${escAttr(loc)}"></option>`);
+      el.innerHTML = sortedLocs.join('');
     }
 
     // ====== 祝日取得＆曜日・時間帯デフォルト判定 ======
@@ -2870,7 +2919,7 @@
       await pushAutoRulesToServer('ルールを削除してシートに反映しました');
     }
 
-    // ====== 1-B. ✏️ ライフログ手動入力 ======
+    // ====== 1-B. ✏️ ライフログ手動入力（場所対応） ======
     function applyCatDefaultsSafely(cat) {
       const amtEl = document.getElementById('inpAmount');
       const calEl = document.getElementById('inpCal');
@@ -3059,9 +3108,10 @@
       const amtRaw = document.getElementById('inpAmount').value.trim();
       const calRaw = document.getElementById('inpCal').value.trim();
       const memo = document.getElementById('inpMemo').value.trim();
+      const location = document.getElementById('inpLocation').value.trim();
 
-      if (!amtRaw && !memo && !calRaw && (!cat || cat.fixed_kcal == null)) {
-        return toast('内容メモまたは金額を入力してください');
+      if (!amtRaw && !memo && !location && !calRaw && (!cat || cat.fixed_kcal == null)) {
+        return toast('内容メモ・場所・金額のいずれかを入力してください');
       }
 
       let dateStr;
@@ -3091,6 +3141,7 @@
         cat1: isUnassigned ? '未分類' : cat.cat1,
         cat2: isUnassigned ? '未分類' : cat.cat2,
         cat3: isUnassigned ? '未分類' : cat.cat3,
+        location,
         amount: amtRaw !== '' ? Number(amtRaw) : null,
         memo,
         calories,
@@ -3100,7 +3151,7 @@
         cal_note: '',
         device: isMobile ? 'mobile' : 'pc',
         ai_cat_id: '',
-        ai_cat_status: isUnassigned ? 'PENDING' : 'NONE',
+        ai_cat_status: (isUnassigned && (memo || location || amtRaw !== '')) ? 'PENDING' : 'NONE',
         ai_cat_note: '',
         _unsynced: true
       };
@@ -3110,6 +3161,7 @@
       persistLocal();
 
       document.getElementById('inpMemo').value = '';
+      document.getElementById('inpLocation').value = '';
       document.getElementById('inpAmount').value = '';
       document.getElementById('inpCal').value = '';
       state.lastAutoAmount = null;
@@ -3127,6 +3179,7 @@
 
       toast(isUnassigned ? '記録しました（AIが分類候補を自動提案します）' : '記録しました');
 
+      renderLocationDatalist();
       renderRecentList();
       renderHistoryView();
       updateUnassignedIndicators();
@@ -3134,7 +3187,7 @@
       flushQueue();
     }
 
-    // ====== AI分類候補のワンタップ承認・ライフログ編集/削除 ======
+    // ====== AI分類候補のワンタップ承認・ライフログ編集/削除（場所対応） ======
     async function approveAiCategory(recordId) {
       const rec = state.records.find(r => r.record_id === recordId);
       if (!rec || !rec.ai_cat_id) return;
@@ -3167,6 +3220,7 @@
         cat1: cat.cat1,
         cat2: cat.cat2,
         cat3: cat.cat3,
+        location: rec.location || '',
         amount: rec.amount,
         memo: rec.memo,
         calories,
@@ -3302,6 +3356,7 @@
       const dt = extractDateAndTime(rec);
       document.getElementById('editRecDate').value = dt.date || formatDateJst(new Date());
       document.getElementById('editRecTime').value = dt.time || '00:00';
+      document.getElementById('editRecLocation').value = rec.location || '';
       document.getElementById('editRecAmt').value = rec.amount != null ? rec.amount : '';
       document.getElementById('editRecCal').value = rec.calories != null ? rec.calories : '';
       document.getElementById('editRecMemo').value = rec.memo || '';
@@ -3331,12 +3386,13 @@
       }
 
       const cat = isNowUnassigned ? null : state.categories.find(c => c.category_id === newCatId);
+      const location = document.getElementById('editRecLocation').value.trim();
       const amtRaw = document.getElementById('editRecAmt').value.trim();
       const calRaw = document.getElementById('editRecCal').value.trim();
       const memo = document.getElementById('editRecMemo').value.trim();
 
-      if (!amtRaw && !memo && !calRaw) {
-        return toast('金額・メモ・カロリーのいずれかを入力してください');
+      if (!amtRaw && !memo && !location && !calRaw) {
+        return toast('金額・場所・メモ・カロリーのいずれかを入力してください');
       }
 
       const newAmount = amtRaw !== '' ? Number(amtRaw) : null;
@@ -3364,7 +3420,7 @@
         }
       }
 
-      const keepAiSug = isNowUnassigned && memo === rec.memo && rec.ai_cat_status === 'DONE' && rec.ai_cat_id;
+      const keepAiSug = isNowUnassigned && memo === rec.memo && location === (rec.location || '') && rec.ai_cat_status === 'DONE' && rec.ai_cat_id;
       const updatedFields = {
         record_id: recordId,
         date: newDate,
@@ -3373,13 +3429,14 @@
         cat1: isNowUnassigned ? '未分類' : (cat ? cat.cat1 : rec.cat1),
         cat2: isNowUnassigned ? '未分類' : (cat ? cat.cat2 : rec.cat2),
         cat3: isNowUnassigned ? '未分類' : (cat ? cat.cat3 : rec.cat3),
+        location,
         amount: newAmount,
         memo,
         calories: newCalories,
         cal_status: newCalStatus,
         cal_note: newCalNote,
         ai_cat_id: keepAiSug ? rec.ai_cat_id : '',
-        ai_cat_status: keepAiSug ? 'DONE' : (isNowUnassigned ? 'PENDING' : 'NONE'),
+        ai_cat_status: keepAiSug ? 'DONE' : (isNowUnassigned && (memo || location || newAmount !== null) ? 'PENDING' : 'NONE'),
         ai_cat_note: keepAiSug ? rec.ai_cat_note : ''
       };
 
@@ -3407,6 +3464,7 @@
       if (queuedNew) {
         Object.assign(queuedNew, updatedFields);
         persistLocal();
+        renderLocationDatalist();
         renderRecentList();
         renderHistoryView();
         updateUnassignedIndicators();
@@ -3425,6 +3483,7 @@
       }
 
       persistLocal();
+      renderLocationDatalist();
       renderRecentList();
       renderHistoryView();
       updateUnassignedIndicators();
@@ -3443,6 +3502,7 @@
       const catSummary = isRecordUnassigned(rec) ? '📥 未分類' : `${rec.cat1} › ${rec.cat2} › ${rec.cat3}`;
       const summaryLines = [
         `${formatDateTime(rec)}  ${catSummary}`,
+        rec.location ? `📍 ${rec.location}` : '',
         rec.memo ? rec.memo : '(メモなし)',
         [
           rec.amount != null ? `¥${rec.amount.toLocaleString()}` : '',
@@ -3459,6 +3519,7 @@
       if (wasUnsynced) {
         state.queue = state.queue.filter(q => q.record_id !== recordId);
         persistLocal();
+        renderLocationDatalist();
         renderRecentList();
         renderHistoryView();
         updateUnassignedIndicators();
@@ -3471,6 +3532,7 @@
         state.deleteQueue.push(recordId);
       }
       persistLocal();
+      renderLocationDatalist();
       renderRecentList();
       renderHistoryView();
       updateUnassignedIndicators();
@@ -3524,6 +3586,7 @@
       } else {
         badges.push(`<span class="badge">${esc(r.cat1)} › ${esc(r.cat2)} › ${esc(r.cat3)}</span>`);
       }
+      if (r.location) badges.push(`<span class="badge badge-loc">📍 ${esc(r.location)}</span>`);
       if (r._unsynced) badges.push('<span class="badge badge-off">未同期</span>');
       if (r.cal_status === 'PENDING') badges.push('<span class="badge badge-ai">AIカロリー待ち</span>');
 
@@ -3545,8 +3608,8 @@
       return `
         <div class="list-item" style="align-items:flex-start;">
           <div style="min-width:0; flex:1;">
-            <div>${badges.join('')}</div>
-            <div style="margin-top:3px; word-break:break-word;">${esc(r.memo || '(メモなし)')}</div>
+            <div style="display:flex; flex-wrap:wrap; gap:3px; align-items:center;">${badges.join('')}</div>
+            <div style="margin-top:3px; white-space:pre-wrap; word-break:break-word; line-height:1.45;">${esc(r.memo || '(メモなし)')}</div>
             <div style="font-size:11px;color:var(--muted);margin-top:2px;">${esc(formatDateTime(r))} ${r.cal_note ? '・' + esc(r.cal_note) : ''}</div>
             ${aiSugHtml}
           </div>
@@ -3572,7 +3635,7 @@
       listEl.innerHTML = items.map(renderRecordRowHtml).join('');
     }
 
-    // ====== 2-A. 記録（ライフログ履歴検索）タブ ======
+    // ====== 2-A. 記録（ライフログ履歴検索・場所検索対応） ======
     function getPeriodDateRange(periodKey) {
       const now = new Date();
       let startDate = '';
@@ -3716,7 +3779,7 @@
           if (startDate && r.date < startDate) return false;
           if (endDate && r.date > endDate) return false;
           if (kw) {
-            const hay = `${r.memo || ''} ${r.cat1 || ''} ${r.cat2 || ''} ${r.cat3 || ''} ${r.cal_note || ''} ${r.ai_cat_note || ''}`.toLowerCase();
+            const hay = `${r.memo || ''} ${r.location || ''} ${r.cat1 || ''} ${r.cat2 || ''} ${r.cat3 || ''} ${r.cal_note || ''} ${r.ai_cat_note || ''}`.toLowerCase();
             if (!hay.includes(kw)) return false;
           }
           return true;
@@ -3827,7 +3890,6 @@
       document.getElementById('kpiCalAvg').textContent = (calDays ? Math.round(calSum / calDays).toLocaleString() : 0) + ' kcal';
       document.getElementById('kpiCount').textContent = inRange.length + ' 件';
 
-      // 体重・体脂肪 KPI（期間内データ優先、0件なら全期間最新を参考表示）
       const allBodyDesc = getBodyLogsSortedDesc();
       const latestWInRange = [...inRangeBody].reverse().find(b => b.weight != null);
       const firstWInRange = inRangeBody.find(b => b.weight != null);
@@ -4404,7 +4466,7 @@
         );
         state.records = [...serverRecords, ...pendingLocalRecs];
 
-        // 2. bodyLogs 同期マージ（1日1件を保ちつつ未送信キューを優先）
+        // 2. bodyLogs 同期マージ
         const pendingBodyDelSet = new Set(state.bodyDeleteQueue);
         const pendingTweetBodies = state.tweetCompleteQueue.flatMap(c => c.body_logs || []);
         const allPendingBodies = [...state.bodyUpsertQueue, ...pendingTweetBodies]
@@ -4531,6 +4593,7 @@
     }
 
     function renderAll() {
+      renderLocationDatalist();
       renderInputControls();
       renderRecentTweetList();
       renderRecentList();
