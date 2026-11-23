@@ -57,6 +57,45 @@
       margin: 0 0 8px; letter-spacing: 0.03em;
     }
 
+    /* ライフログ ／ 体重・体脂肪 モード切り替えスイッチ */
+    .mode-switch {
+      display: inline-grid; grid-template-columns: 1fr 1fr; gap: 4px;
+      width: 100%; background: #e5e7eb; padding: 3px; border-radius: 11px;
+      margin-bottom: 12px;
+    }
+    .mode-switch button {
+      border: none; background: transparent; border-radius: 8px;
+      padding: 7px 10px; font-size: 12px; font-weight: 700; color: var(--muted);
+      cursor: pointer; transition: 0.15s;
+    }
+    .mode-switch button.active {
+      background: #fff; color: var(--primary);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .mode-switch button.active.body-active {
+      color: var(--l2);
+    }
+
+    /* 体重：同日上書きバナー・ヒント・差分バッジ */
+    .overwrite-banner {
+      display: none; align-items: center; justify-content: space-between; gap: 8px;
+      background: #f0fdfa; border: 1.5px solid #5eead4; border-radius: 10px;
+      padding: 8px 10px; margin-bottom: 12px; font-size: 12px; color: #115e59;
+    }
+    .overwrite-banner.show { display: flex; }
+    .field-hint {
+      font-weight: 600; color: var(--l2); margin-left: 6px; font-size: 11px;
+    }
+    .delta-pill {
+      display: inline-block; font-size: 11px; font-weight: 700;
+      padding: 1px 6px; border-radius: 6px; margin-left: 6px;
+    }
+    .delta-down { background: #d1fae5; color: #065f46; }
+    .delta-up { background: #fee2e2; color: #b91c1c; }
+    .delta-flat { background: #f3f4f6; color: #6b7280; }
+    .btn-teal { background: var(--l2); color: #fff; }
+    .btn-teal:active { opacity: 0.85; transform: scale(0.99); }
+
     /* 未分類アラートバナー（入力タブ上部） */
     .inbox-banner {
       display: none; align-items: center; justify-content: space-between; gap: 10px;
@@ -239,7 +278,7 @@
     }
     .filter-head .section-title { margin: 0; }
 
-    /* 編集モーダル（大→中→小 3段階連動） */
+    /* 編集モーダル */
     .modal-backdrop {
       position: fixed; inset: 0; z-index: 60;
       background: rgba(15, 23, 42, 0.48);
@@ -295,6 +334,7 @@
     .kpi { background: var(--card); border-radius: 12px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
     .kpi-label { font-size: 11px; color: var(--muted); }
     .kpi-val { font-size: 20px; font-weight: 800; margin-top: 2px; }
+    .kpi-sub { font-size: 11px; color: var(--muted); margin-top: 2px; font-weight: 600; }
     .chart-box { position: relative; height: 240px; width: 100%; }
     .chart-box-sm { position: relative; height: 210px; width: 100%; }
 
@@ -308,6 +348,7 @@
       display: inline-block; font-size: 10px; padding: 2px 6px; border-radius: 6px;
       background: var(--primary-bg); color: var(--primary); font-weight: 600; margin-right: 4px;
     }
+    .badge-teal { background: var(--l2-bg); color: var(--l2); font-weight: 700; }
     .badge-unassigned { background: #fef3c7; color: #b45309; font-weight: 700; }
     .badge-ai { background: #fef3c7; color: var(--warn); }
     .badge-off { background: #e5e7eb; color: #4b5563; }
@@ -340,6 +381,7 @@
       position: fixed; top: 64px; left: 50%; transform: translateX(-50%);
       background: #111827; color: #fff; padding: 9px 16px; border-radius: 999px;
       font-size: 13px; z-index: 70; opacity: 0; pointer-events: none; transition: 0.2s;
+      max-width: 90vw; text-align: center;
     }
     .toast.show { opacity: 0.95; }
   </style>
@@ -352,7 +394,7 @@
 
   <div id="toast" class="toast"></div>
 
-  <!-- 記録編集モーダル（大→中→小 3段階連動 ＋ 連続仕分け対応） -->
+  <!-- ライフログ記録編集モーダル -->
   <div id="editModal" class="modal-backdrop" onclick="if (event.target === this) closeEditModal();">
     <div class="modal-card">
       <div class="modal-head">
@@ -415,149 +457,307 @@
     </div>
   </div>
 
-  <main>
-    <!-- ========== 1. 入力タブ（内容メモ → 金額・カロリー → 分類 → 日時） ========== -->
-    <section id="view-input" class="view active">
-      <div id="inputInboxBanner" class="inbox-banner">
-        <span>📥 未分類の記録が <strong id="inputInboxCount">0</strong> 件あります</span>
-        <button class="btn btn-warn btn-sm" onclick="jumpToUnassignedHistory()">整理する</button>
+  <!-- 体重・体脂肪 編集モーダル -->
+  <div id="editBodyModal" class="modal-backdrop" onclick="if (event.target === this) closeEditBodyModal();">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2>⚖️ 体重・体脂肪を編集</h2>
+        <button class="modal-close" onclick="closeEditBodyModal()" aria-label="閉じる">×</button>
       </div>
+      <input type="hidden" id="editBodyLogId" />
 
-      <div class="card">
-        <!-- 1. 内容メモ -->
+      <div class="row-2">
         <div class="field">
-          <label for="inpMemo">内容メモ（食べ物・買ったもの・気持ちなど）</label>
-          <textarea id="inpMemo" rows="2" autocomplete="off" placeholder="例: 豚骨ラーメン 麺少なめ / スタバ ラテ / 会議がスムーズに終わった"></textarea>
+          <label for="editBodyDate">記録日（1日1件）</label>
+          <input id="editBodyDate" type="date" />
         </div>
-
-        <!-- 2. 金額・カロリー -->
-        <div class="row-2">
-          <div class="field">
-            <label for="inpAmount">金額（円）</label>
-            <input id="inpAmount" type="number" inputmode="numeric" autocomplete="off" placeholder="例: 950" />
-          </div>
-          <div class="field" id="calFieldWrap">
-            <label for="inpCal">カロリー（kcal）</label>
-            <input id="inpCal" type="number" inputmode="numeric" autocomplete="off" placeholder="分類確定後にAI自動計算" />
-          </div>
+        <div class="field">
+          <label for="editBodyTime">時刻</label>
+          <input id="editBodyTime" type="time" />
         </div>
-
-        <!-- 3. 分類（デフォルトは「あとで分類」で折りたたみ） -->
-        <div id="selectedPath" class="selected-path"></div>
-
-        <div id="catPickerWrap" style="display:none;">
-          <div id="shortcutWrap" class="shortcut-wrap">
-            <p class="section-title">⚡ ショートカット（1タップ選択）</p>
-            <div id="shortcutGrid" class="shortcut-grid"></div>
-          </div>
-
-          <div class="cat-group l1">
-            <div class="cat-group-label"><span class="step-num">1</span> 大分類</div>
-            <div id="cat1Chips" class="chip-row"></div>
-          </div>
-
-          <div class="cat-group l2">
-            <div class="cat-group-label"><span class="step-num">2</span> 中分類</div>
-            <div id="cat2Chips" class="chip-row"></div>
-          </div>
-
-          <div class="cat-group l3">
-            <div class="cat-group-label"><span class="step-num">3</span> 小分類</div>
-            <div id="cat3Chips" class="chip-row"></div>
-          </div>
-        </div>
-
-        <!-- 4. 日時指定 -->
-        <div class="dt-bar">
-          <span>🕒 記録日時: <strong id="inpDtStatus">現在時刻（自動）</strong></span>
-          <button type="button" id="inpDtToggleBtn" class="btn btn-sub btn-sm" onclick="toggleCustomDateTime()">日時を指定</button>
-        </div>
-        <div id="inpDtFields" class="dt-fields">
-          <div class="field" style="margin-bottom:0;">
-            <label for="inpDate">記録日</label>
-            <input id="inpDate" type="date" onchange="updateCustomDtLabel()" />
-          </div>
-          <div class="field" style="margin-bottom:0;">
-            <label for="inpTime">時刻</label>
-            <input id="inpTime" type="time" onchange="updateCustomDtLabel()" />
-          </div>
-        </div>
-
-        <button id="btnSubmitRecord" class="btn btn-primary" onclick="submitRecord()">記録する（あとで分類）</button>
       </div>
 
-      <div class="card">
-        <p class="section-title">🕒 最近の記録（直近10件）</p>
-        <div id="recentList"></div>
+      <div class="row-2">
+        <div class="field">
+          <label for="editBodyWeight">体重（kg）*</label>
+          <input id="editBodyWeight" type="number" step="0.1" inputmode="decimal" autocomplete="off" placeholder="例: 68.4" />
+        </div>
+        <div class="field">
+          <label for="editBodyFat">体脂肪率（%）</label>
+          <input id="editBodyFat" type="number" step="0.1" inputmode="decimal" autocomplete="off" placeholder="空欄可" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="editBodyMemo">メモ（任意）</label>
+        <input id="editBodyMemo" type="text" autocomplete="off" placeholder="例: 起床後 / 飲み会翌日" />
+      </div>
+
+      <div class="row-2">
+        <button class="btn btn-teal" onclick="saveEditedBodyLog()">変更を保存</button>
+        <button class="btn btn-sub" onclick="closeEditBodyModal()">キャンセル</button>
+      </div>
+    </div>
+  </div>
+
+  <main>
+    <!-- ========== 1. 入力タブ ========== -->
+    <section id="view-input" class="view active">
+      <!-- 入力モード切り替えスイッチ -->
+      <div class="mode-switch" id="inputModeSwitch">
+        <button type="button" class="active" data-mode="lifelog" onclick="switchInputMode('lifelog')">✏️ ライフログ</button>
+        <button type="button" data-mode="body" onclick="switchInputMode('body')">⚖️ 体重・体脂肪</button>
+      </div>
+
+      <!-- 1-A. ライフログ入力 -->
+      <div id="inputLifelogWrap">
+        <div id="inputInboxBanner" class="inbox-banner">
+          <span>📥 未分類の記録が <strong id="inputInboxCount">0</strong> 件あります</span>
+          <button class="btn btn-warn btn-sm" onclick="jumpToUnassignedHistory()">整理する</button>
+        </div>
+
+        <div class="card">
+          <!-- 1. 内容メモ -->
+          <div class="field">
+            <label for="inpMemo">内容メモ（食べ物・買ったもの・気持ちなど）</label>
+            <textarea id="inpMemo" rows="2" autocomplete="off" placeholder="例: 豚骨ラーメン 麺少なめ / スタバ ラテ / 会議がスムーズに終わった"></textarea>
+          </div>
+
+          <!-- 2. 金額・カロリー -->
+          <div class="row-2">
+            <div class="field">
+              <label for="inpAmount">金額（円）</label>
+              <input id="inpAmount" type="number" inputmode="numeric" autocomplete="off" placeholder="例: 950" />
+            </div>
+            <div class="field" id="calFieldWrap">
+              <label for="inpCal">カロリー（kcal）</label>
+              <input id="inpCal" type="number" inputmode="numeric" autocomplete="off" placeholder="分類確定後にAI自動計算" />
+            </div>
+          </div>
+
+          <!-- 3. 分類（デフォルトは「あとで分類」で折りたたみ） -->
+          <div id="selectedPath" class="selected-path"></div>
+
+          <div id="catPickerWrap" style="display:none;">
+            <div id="shortcutWrap" class="shortcut-wrap">
+              <p class="section-title">⚡ ショートカット（1タップ選択）</p>
+              <div id="shortcutGrid" class="shortcut-grid"></div>
+            </div>
+
+            <div class="cat-group l1">
+              <div class="cat-group-label"><span class="step-num">1</span> 大分類</div>
+              <div id="cat1Chips" class="chip-row"></div>
+            </div>
+
+            <div class="cat-group l2">
+              <div class="cat-group-label"><span class="step-num">2</span> 中分類</div>
+              <div id="cat2Chips" class="chip-row"></div>
+            </div>
+
+            <div class="cat-group l3">
+              <div class="cat-group-label"><span class="step-num">3</span> 小分類</div>
+              <div id="cat3Chips" class="chip-row"></div>
+            </div>
+          </div>
+
+          <!-- 4. 日時指定 -->
+          <div class="dt-bar">
+            <span>🕒 記録日時: <strong id="inpDtStatus">現在時刻（自動）</strong></span>
+            <button type="button" id="inpDtToggleBtn" class="btn btn-sub btn-sm" onclick="toggleCustomDateTime()">日時を指定</button>
+          </div>
+          <div id="inpDtFields" class="dt-fields">
+            <div class="field" style="margin-bottom:0;">
+              <label for="inpDate">記録日</label>
+              <input id="inpDate" type="date" onchange="updateCustomDtLabel()" />
+            </div>
+            <div class="field" style="margin-bottom:0;">
+              <label for="inpTime">時刻</label>
+              <input id="inpTime" type="time" onchange="updateCustomDtLabel()" />
+            </div>
+          </div>
+
+          <button id="btnSubmitRecord" class="btn btn-primary" onclick="submitRecord()">記録する（あとで分類）</button>
+        </div>
+
+        <div class="card">
+          <p class="section-title">🕒 最近の記録（直近10件）</p>
+          <div id="recentList"></div>
+        </div>
+      </div>
+
+      <!-- 1-B. 体重・体脂肪入力 -->
+      <div id="inputBodyWrap" style="display:none;">
+        <div class="card">
+          <div id="bodyOverwriteBanner" class="overwrite-banner">
+            <span id="bodyOverwriteText"></span>
+            <button type="button" class="btn btn-sub btn-sm" onclick="loadExistingBodyForDate()">現在値を呼出</button>
+          </div>
+
+          <div class="row-2">
+            <div class="field">
+              <label for="inpBodyWeight">体重（kg）*<span id="bodyWeightHint" class="field-hint"></span></label>
+              <input id="inpBodyWeight" type="number" step="0.1" inputmode="decimal" autocomplete="off" placeholder="例: 68.4" />
+            </div>
+            <div class="field">
+              <label for="inpBodyFat">体脂肪率（%）<span id="bodyFatHint" class="field-hint"></span></label>
+              <input id="inpBodyFat" type="number" step="0.1" inputmode="decimal" autocomplete="off" placeholder="空欄OK" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="inpBodyMemo">メモ（任意）</label>
+            <input id="inpBodyMemo" type="text" autocomplete="off" placeholder="例: 起床後 / 飲み会翌日 / ジム後" />
+          </div>
+
+          <div class="dt-bar">
+            <span>🕒 測定日時: <strong id="inpBodyDtStatus">現在時刻（自動）</strong></span>
+            <button type="button" id="inpBodyDtToggleBtn" class="btn btn-sub btn-sm" onclick="toggleBodyCustomDateTime()">日時を指定</button>
+          </div>
+          <div id="inpBodyDtFields" class="dt-fields">
+            <div class="field" style="margin-bottom:0;">
+              <label for="inpBodyDate">測定日</label>
+              <input id="inpBodyDate" type="date" onchange="onBodyCustomDtChange()" />
+            </div>
+            <div class="field" style="margin-bottom:0;">
+              <label for="inpBodyTime">時刻</label>
+              <input id="inpBodyTime" type="time" onchange="onBodyCustomDtChange()" />
+            </div>
+          </div>
+
+          <button id="btnSubmitBody" class="btn btn-teal" onclick="submitBodyLog()">体重・体脂肪を記録する</button>
+        </div>
+
+        <div class="card">
+          <p class="section-title">⚖️ 最近の体重・体脂肪（直近10件）</p>
+          <div id="recentBodyList"></div>
+        </div>
       </div>
     </section>
 
     <!-- ========== 2. 記録（履歴検索）タブ ========== -->
     <section id="view-history" class="view">
-      <button id="btnUnassignedFilter" class="unassigned-filter-btn" onclick="toggleUnassignedOnlyFilter()">
-        <span id="btnUnassignedLabel">📥 未分類のみ表示（0件）</span>
-        <span id="btnUnassignedState" style="font-size:11px;">タップで絞り込み</span>
-      </button>
+      <!-- 履歴モード切り替えスイッチ -->
+      <div class="mode-switch" id="histModeSwitch">
+        <button type="button" class="active" data-mode="lifelog" onclick="switchHistoryMode('lifelog')">📝 ライフログ</button>
+        <button type="button" data-mode="body" onclick="switchHistoryMode('body')">⚖️ 体重・体脂肪</button>
+      </div>
 
-      <div class="card">
-        <div class="filter-head">
-          <p class="section-title">🔍 記録を検索・絞り込み</p>
-          <button class="btn btn-sub btn-sm" onclick="resetHistoryFilter()">クリア</button>
+      <!-- 2-A. ライフログ履歴 -->
+      <div id="histLifelogWrap">
+        <button id="btnUnassignedFilter" class="unassigned-filter-btn" onclick="toggleUnassignedOnlyFilter()">
+          <span id="btnUnassignedLabel">📥 未分類のみ表示（0件）</span>
+          <span id="btnUnassignedState" style="font-size:11px;">タップで絞り込み</span>
+        </button>
+
+        <div class="card">
+          <div class="filter-head">
+            <p class="section-title">🔍 記録を検索・絞り込み</p>
+            <button class="btn btn-sub btn-sm" onclick="resetHistoryFilter()">クリア</button>
+          </div>
+
+          <div class="row-3">
+            <div class="field" style="margin-bottom:8px;">
+              <label for="histCat1">大分類</label>
+              <select id="histCat1" onchange="onHistoryCat1Change()"></select>
+            </div>
+            <div class="field" style="margin-bottom:8px;">
+              <label for="histCat2">中分類</label>
+              <select id="histCat2" onchange="onHistoryCat2Change()"></select>
+            </div>
+            <div class="field" style="margin-bottom:8px;">
+              <label for="histCat3">小分類</label>
+              <select id="histCat3" onchange="onHistoryCat3Change()"></select>
+            </div>
+          </div>
+
+          <div class="row-2">
+            <div class="field" style="margin-bottom:0;">
+              <label for="histPeriod">期間</label>
+              <select id="histPeriod" onchange="onHistoryFilterChange()">
+                <option value="all">全期間（直近1年）</option>
+                <option value="this_month">今月</option>
+                <option value="last_month">先月</option>
+                <option value="7d">直近7日間</option>
+                <option value="30d">直近30日間</option>
+              </select>
+            </div>
+            <div class="field" style="margin-bottom:0;">
+              <label for="histKeyword">メモ検索</label>
+              <input id="histKeyword" type="search" autocomplete="off" placeholder="キーワード" oninput="onHistoryFilterChange()" />
+            </div>
+          </div>
         </div>
 
-        <div class="row-3">
-          <div class="field" style="margin-bottom:8px;">
-            <label for="histCat1">大分類</label>
-            <select id="histCat1" onchange="onHistoryCat1Change()"></select>
+        <div class="filter-summary">
+          <div class="fs-box">
+            <div class="fs-label">該当件数</div>
+            <div id="histSumCount" class="fs-val">0 件</div>
           </div>
-          <div class="field" style="margin-bottom:8px;">
-            <label for="histCat2">中分類</label>
-            <select id="histCat2" onchange="onHistoryCat2Change()"></select>
+          <div class="fs-box">
+            <div class="fs-label">支出合計</div>
+            <div id="histSumAmt" class="fs-val">¥0</div>
           </div>
-          <div class="field" style="margin-bottom:8px;">
-            <label for="histCat3">小分類</label>
-            <select id="histCat3" onchange="onHistoryCat3Change()"></select>
+          <div class="fs-box">
+            <div class="fs-label">カロリー合計</div>
+            <div id="histSumCal" class="fs-val">0 kcal</div>
           </div>
         </div>
 
-        <div class="row-2">
-          <div class="field" style="margin-bottom:0;">
-            <label for="histPeriod">期間</label>
-            <select id="histPeriod" onchange="onHistoryFilterChange()">
-              <option value="all">全期間（直近1年）</option>
-              <option value="this_month">今月</option>
-              <option value="last_month">先月</option>
-              <option value="7d">直近7日間</option>
-              <option value="30d">直近30日間</option>
-            </select>
-          </div>
-          <div class="field" style="margin-bottom:0;">
-            <label for="histKeyword">メモ検索</label>
-            <input id="histKeyword" type="search" autocomplete="off" placeholder="キーワード" oninput="onHistoryFilterChange()" />
+        <div class="card">
+          <p class="section-title" id="histListTitle">📋 記録一覧</p>
+          <div id="historyList"></div>
+          <div id="histLoadMoreWrap" style="margin-top:12px; display:none;">
+            <button class="btn btn-sub" onclick="loadMoreHistory()">さらに50件を表示</button>
           </div>
         </div>
       </div>
 
-      <div class="filter-summary">
-        <div class="fs-box">
-          <div class="fs-label">該当件数</div>
-          <div id="histSumCount" class="fs-val">0 件</div>
+      <!-- 2-B. 体重・体脂肪履歴 -->
+      <div id="histBodyWrap" style="display:none;">
+        <div class="card">
+          <div class="filter-head">
+            <p class="section-title">🔍 体重・体脂肪を絞り込み</p>
+            <button class="btn btn-sub btn-sm" onclick="resetBodyHistoryFilter()">クリア</button>
+          </div>
+          <div class="row-2">
+            <div class="field" style="margin-bottom:0;">
+              <label for="histBodyPeriod">期間</label>
+              <select id="histBodyPeriod" onchange="onBodyHistoryFilterChange()">
+                <option value="all">全期間（直近1年）</option>
+                <option value="this_month">今月</option>
+                <option value="last_month">先月</option>
+                <option value="7d">直近7日間</option>
+                <option value="30d">直近30日間</option>
+              </select>
+            </div>
+            <div class="field" style="margin-bottom:0;">
+              <label for="histBodyKeyword">メモ検索</label>
+              <input id="histBodyKeyword" type="search" autocomplete="off" placeholder="キーワード" oninput="onBodyHistoryFilterChange()" />
+            </div>
+          </div>
         </div>
-        <div class="fs-box">
-          <div class="fs-label">支出合計</div>
-          <div id="histSumAmt" class="fs-val">¥0</div>
-        </div>
-        <div class="fs-box">
-          <div class="fs-label">カロリー合計</div>
-          <div id="histSumCal" class="fs-val">0 kcal</div>
-        </div>
-      </div>
 
-      <div class="card">
-        <p class="section-title" id="histListTitle">📋 記録一覧</p>
-        <div id="historyList"></div>
-        <div id="histLoadMoreWrap" style="margin-top:12px; display:none;">
-          <button class="btn btn-sub" onclick="loadMoreHistory()">さらに50件を表示</button>
+        <div class="filter-summary">
+          <div class="fs-box">
+            <div class="fs-label">平均体重</div>
+            <div id="histBodyAvgWeight" class="fs-val">-- kg</div>
+          </div>
+          <div class="fs-box">
+            <div class="fs-label">平均体脂肪</div>
+            <div id="histBodyAvgFat" class="fs-val">-- %</div>
+          </div>
+          <div class="fs-box">
+            <div class="fs-label">期間増減</div>
+            <div id="histBodyDelta" class="fs-val">--</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <p class="section-title" id="histBodyListTitle">⚖️ 体重・体脂肪一覧</p>
+          <div id="historyBodyList"></div>
+          <div id="histBodyLoadMoreWrap" style="margin-top:12px; display:none;">
+            <button class="btn btn-sub" onclick="loadMoreBodyHistory()">さらに50件を表示</button>
+          </div>
         </div>
       </div>
     </section>
@@ -578,6 +778,16 @@
         <div class="kpi"><div class="kpi-label">1日平均支出</div><div id="kpiSpendAvg" class="kpi-val">¥0</div></div>
         <div class="kpi"><div class="kpi-label">1日平均カロリー</div><div id="kpiCalAvg" class="kpi-val">0 kcal</div></div>
         <div class="kpi"><div class="kpi-label">記録件数</div><div id="kpiCount" class="kpi-val">0 件</div></div>
+        <div class="kpi">
+          <div class="kpi-label">最新体重（期間開始比）</div>
+          <div id="kpiLatestWeight" class="kpi-val">-- kg</div>
+          <div id="kpiLatestWeightDiff" class="kpi-sub"></div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">最新体脂肪率</div>
+          <div id="kpiLatestFat" class="kpi-val">-- %</div>
+          <div id="kpiLatestFatSub" class="kpi-sub"></div>
+        </div>
       </div>
 
       <div class="card">
@@ -588,6 +798,11 @@
       <div class="card">
         <p class="section-title" id="calChartTitle">🔥 摂取カロリーの推移（赤線＝目標）</p>
         <div class="chart-box"><canvas id="calChart"></canvas></div>
+      </div>
+
+      <div class="card">
+        <p class="section-title" id="bodyChartTitle">⚖️ 体重・体脂肪の推移（赤線＝目標体重）</p>
+        <div class="chart-box"><canvas id="bodyChart"></canvas></div>
       </div>
 
       <div class="card">
@@ -682,9 +897,9 @@
         </div>
       </div>
 
-      <!-- GAS接続設定 -->
+      <!-- GAS接続＆目標設定 -->
       <div class="card">
-        <p class="section-title">⚙️ GAS 接続設定（端末ローカル保存）</p>
+        <p class="section-title">⚙️ GAS 接続・目標設定（端末ローカル保存）</p>
         <div class="field">
           <label for="setGasUrl">GAS Webアプリ URL</label>
           <input id="setGasUrl" type="url" autocomplete="off" placeholder="https://script.google.com/macros/s/.../exec" />
@@ -696,6 +911,10 @@
         <div class="field">
           <label for="setTargetCal">1日の目標カロリー（グラフ基準線）</label>
           <input id="setTargetCal" type="number" autocomplete="off" value="2000" />
+        </div>
+        <div class="field">
+          <label for="setTargetWeight">目標体重（kg・グラフ基準線）</label>
+          <input id="setTargetWeight" type="number" step="0.1" inputmode="decimal" autocomplete="off" placeholder="例: 65.0（空欄なら基準線なし）" />
         </div>
         <button class="btn btn-primary" onclick="saveSettings()">設定を保存して同期</button>
       </div>
@@ -731,7 +950,6 @@
     <button data-view="categories"><span class="ico">🏷️</span>分類管理</button>
     <button data-view="settings"><span class="ico">⚙️</span>設定</button>
   </nav>
-
   <script>
     // ====== 定数・状態管理 ======
     const UNASSIGNED_ID = 'UNASSIGNED';
@@ -743,6 +961,9 @@
       queue: 'll_queue_v1',
       updateQueue: 'll_upd_queue_v1',
       deleteQueue: 'll_del_queue_v1',
+      bodyLogs: 'll_body_logs_v1',
+      bodyUpsertQueue: 'll_body_upsert_q_v1',
+      bodyDeleteQueue: 'll_body_del_q_v1',
       autoRules: 'll_autorules_v1',
       autoRulesDirty: 'll_autorules_dirty_v1',
       holidays: 'll_holidays_v1'
@@ -756,27 +977,35 @@
     };
 
     const state = {
-      settings: JSON.parse(localStorage.getItem(KEYS.settings) || '{"gasUrl":"","token":"","targetCal":2000}'),
+      settings: JSON.parse(localStorage.getItem(KEYS.settings) || '{"gasUrl":"","token":"","targetCal":2000,"targetWeight":null}'),
       categories: JSON.parse(localStorage.getItem(KEYS.categories) || '[]'),
       records: JSON.parse(localStorage.getItem(KEYS.records) || '[]'),
       queue: JSON.parse(localStorage.getItem(KEYS.queue) || '[]'),
       updateQueue: JSON.parse(localStorage.getItem(KEYS.updateQueue) || '[]'),
       deleteQueue: JSON.parse(localStorage.getItem(KEYS.deleteQueue) || '[]'),
+      bodyLogs: JSON.parse(localStorage.getItem(KEYS.bodyLogs) || '[]'),
+      bodyUpsertQueue: JSON.parse(localStorage.getItem(KEYS.bodyUpsertQueue) || '[]'),
+      bodyDeleteQueue: JSON.parse(localStorage.getItem(KEYS.bodyDeleteQueue) || '[]'),
       autoRules: JSON.parse(localStorage.getItem(KEYS.autoRules) || '{"fallbackCatId":"","rules":[]}'),
       autoRulesDirty: localStorage.getItem(KEYS.autoRulesDirty) === '1',
       holidaysCache: JSON.parse(localStorage.getItem(KEYS.holidays) || '{"fetchedAt":0,"dates":{}}'),
+      inputMode: 'lifelog',
+      histMode: 'lifelog',
       selCat1: '', selCat2: '', selCatId: '',
       lastAutoAmount: null,
       lastAutoCal: null,
       unassignedMode: true,
       useCustomDateTime: false,
+      useBodyCustomDateTime: false,
       editModalLegacyCat: null,
       histFilter: { cat1: '', cat2: '', cat3: '', period: 'all', keyword: '', unassignedOnly: false },
       histLimit: 50,
+      histBodyFilter: { period: 'all', keyword: '' },
+      histBodyLimit: 50,
       userManuallyPicked: false,
       hasUrlCatParam: false,
       period: 'daily',
-      charts: { spend: null, cal: null, pie: null }
+      charts: { spend: null, cal: null, body: null, pie: null }
     };
 
     if (!state.categories.length) {
@@ -807,6 +1036,7 @@
 
       document.getElementById('setGasUrl').value = state.settings.gasUrl || '';
       document.getElementById('setTargetCal').value = state.settings.targetCal || 2000;
+      document.getElementById('setTargetWeight').value = state.settings.targetWeight ?? '';
       refreshTokenFieldUI();
 
       const params = new URLSearchParams(location.search);
@@ -816,7 +1046,6 @@
         state.unassignedMode = false;
         selectByCategoryId(urlCat, false);
       } else {
-        // 通常起動はデフォルト「あとで分類」ON（裏で現在時刻の分類候補も準備）
         state.unassignedMode = true;
         applyAutoDefaultCategory(true);
       }
@@ -837,17 +1066,52 @@
       window.addEventListener('online', () => syncAll(false));
 
       document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible' && !state.hasUrlCatParam) {
-          const amt = document.getElementById('inpAmount').value.trim();
-          const memo = document.getElementById('inpMemo').value.trim();
-          if (!amt && !memo && !state.useCustomDateTime) {
-            state.unassignedMode = true;
-            state.userManuallyPicked = false;
-            applyAutoDefaultCategory(true);
+        if (document.visibilityState === 'visible') {
+          updateBodyInputContext();
+          if (!state.hasUrlCatParam) {
+            const amt = document.getElementById('inpAmount').value.trim();
+            const memo = document.getElementById('inpMemo').value.trim();
+            if (!amt && !memo && !state.useCustomDateTime) {
+              state.unassignedMode = true;
+              state.userManuallyPicked = false;
+              applyAutoDefaultCategory(true);
+            }
           }
         }
       });
     });
+
+    // ====== モード切り替え（ライフログ ／ 体重・体脂肪） ======
+    function switchInputMode(mode) {
+      state.inputMode = mode;
+      document.querySelectorAll('#inputModeSwitch button').forEach(b => {
+        const isAct = b.dataset.mode === mode;
+        b.classList.toggle('active', isAct);
+        b.classList.toggle('body-active', isAct && mode === 'body');
+      });
+      document.getElementById('inputLifelogWrap').style.display = mode === 'lifelog' ? 'block' : 'none';
+      document.getElementById('inputBodyWrap').style.display = mode === 'body' ? 'block' : 'none';
+      if (mode === 'body') {
+        updateBodyInputContext();
+        renderRecentBodyList();
+      }
+    }
+
+    function switchHistoryMode(mode) {
+      state.histMode = mode;
+      document.querySelectorAll('#histModeSwitch button').forEach(b => {
+        const isAct = b.dataset.mode === mode;
+        b.classList.toggle('active', isAct);
+        b.classList.toggle('body-active', isAct && mode === 'body');
+      });
+      document.getElementById('histLifelogWrap').style.display = mode === 'lifelog' ? 'block' : 'none';
+      document.getElementById('histBodyWrap').style.display = mode === 'body' ? 'block' : 'none';
+      if (mode === 'body') {
+        renderBodyHistoryView();
+      } else {
+        renderHistoryView();
+      }
+    }
 
     function isRecordUnassigned(r) {
       return !r || !r.category_id || r.category_id === UNASSIGNED_ID;
@@ -881,6 +1145,7 @@
     function jumpToUnassignedHistory() {
       state.histFilter = { cat1: '', cat2: '', cat3: '', period: 'all', keyword: '', unassignedOnly: true };
       state.histLimit = 50;
+      switchHistoryMode('lifelog');
       switchView('history');
     }
 
@@ -914,7 +1179,14 @@
         tokenInp.disabled = true;
       }
 
-      if (name === 'history') renderHistoryView();
+      if (name === 'input' && state.inputMode === 'body') {
+        updateBodyInputContext();
+        renderRecentBodyList();
+      }
+      if (name === 'history') {
+        if (state.histMode === 'body') renderBodyHistoryView();
+        else renderHistoryView();
+      }
       if (name === 'charts') renderCharts();
       if (name === 'categories') renderCategoryManager();
       if (name === 'settings') {
@@ -1132,12 +1404,11 @@
       await pushAutoRulesToServer('ルールを削除してシートに反映しました');
     }
 
-    // ====== 1. 入力・あとで分類スイッチ（デフォルトON）・3階層連動・日時指定 ======
+    // ====== 1-A. ライフログ入力 ======
     function applyCatDefaultsSafely(cat) {
       const amtEl = document.getElementById('inpAmount');
       const calEl = document.getElementById('inpCal');
 
-      // すでにユーザーが金額を手入力している場合は上書きしない
       if (amtEl.value === '' || (state.lastAutoAmount != null && amtEl.value === String(state.lastAutoAmount))) {
         amtEl.value = cat.default_amount ?? '';
         state.lastAutoAmount = cat.default_amount ?? null;
@@ -1154,7 +1425,6 @@
       const calEl = document.getElementById('inpCal');
 
       if (state.unassignedMode) {
-        // 自動入力されていた既定値だけクリア（手入力した金額はそのまま残す）
         if (state.lastAutoAmount != null && amtEl.value === String(state.lastAutoAmount)) {
           amtEl.value = '';
         }
@@ -1384,7 +1654,6 @@
       state.lastAutoCal = null;
       if (state.useCustomDateTime) toggleCustomDateTime(true);
 
-      // URLショートカット起動時以外は、記録後にデフォルトの「あとで分類」へ戻す
       if (!state.hasUrlCatParam) {
         state.unassignedMode = true;
         state.userManuallyPicked = false;
@@ -1401,6 +1670,360 @@
       updateUnassignedIndicators();
       updateSyncBadge();
       flushQueue();
+    }
+
+    // ====== 1-B. 体重・体脂肪 入力・1日1件上書き・編集・削除 ======
+    function getBodyLogsSortedAsc() {
+      return [...state.bodyLogs].sort((a, b) => {
+        if (a.date !== b.date) return a.date.localeCompare(b.date);
+        return toSortMillis(a) - toSortMillis(b);
+      });
+    }
+
+    function getBodyLogsSortedDesc() {
+      return [...state.bodyLogs].sort((a, b) => {
+        if (a.date !== b.date) return b.date.localeCompare(a.date);
+        return toSortMillis(b) - toSortMillis(a);
+      });
+    }
+
+    function getTargetBodyDateStr() {
+      if (state.useBodyCustomDateTime) {
+        return document.getElementById('inpBodyDate').value || formatDateJst(new Date());
+      }
+      return formatDateJst(new Date());
+    }
+
+    function toggleBodyCustomDateTime(forceOff = false) {
+      state.useBodyCustomDateTime = forceOff ? false : !state.useBodyCustomDateTime;
+      const fields = document.getElementById('inpBodyDtFields');
+      const btn = document.getElementById('inpBodyDtToggleBtn');
+      if (state.useBodyCustomDateTime) {
+        const now = new Date();
+        document.getElementById('inpBodyDate').value = formatDateJst(now);
+        document.getElementById('inpBodyTime').value =
+          `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        fields.classList.add('open');
+        btn.textContent = '現在時刻に戻す';
+        onBodyCustomDtChange();
+      } else {
+        fields.classList.remove('open');
+        btn.textContent = '日時を指定';
+        document.getElementById('inpBodyDtStatus').textContent = '現在時刻（自動）';
+        updateBodyInputContext();
+      }
+    }
+
+    function onBodyCustomDtChange() {
+      if (state.useBodyCustomDateTime) {
+        const d = document.getElementById('inpBodyDate').value;
+        const t = document.getElementById('inpBodyTime').value || '00:00';
+        document.getElementById('inpBodyDtStatus').textContent = d ? `${d} ${t}` : '日付を選択';
+      }
+      updateBodyInputContext();
+    }
+
+    function updateBodyInputContext() {
+      const sortedDesc = getBodyLogsSortedDesc();
+      const targetDate = getTargetBodyDateStr();
+      const existingSameDay = state.bodyLogs.find(b => b.date === targetDate);
+
+      // 前回値ヒント（対象日と同日を除く最新、なければ最新全体）
+      const prevWeightLog = sortedDesc.find(b => b.weight != null && b.date !== targetDate) || sortedDesc.find(b => b.weight != null);
+      const prevFatLog = sortedDesc.find(b => b.body_fat != null && b.date !== targetDate) || sortedDesc.find(b => b.body_fat != null);
+
+      const wInp = document.getElementById('inpBodyWeight');
+      const fInp = document.getElementById('inpBodyFat');
+      const wHint = document.getElementById('bodyWeightHint');
+      const fHint = document.getElementById('bodyFatHint');
+
+      if (prevWeightLog) {
+        const md = prevWeightLog.date.slice(5).replace('-', '/');
+        wHint.textContent = `前回: ${prevWeightLog.weight.toFixed(1)}kg (${md})`;
+        wInp.placeholder = `前回: ${prevWeightLog.weight.toFixed(1)}`;
+      } else {
+        wHint.textContent = '';
+        wInp.placeholder = '例: 68.4';
+      }
+
+      if (prevFatLog) {
+        fHint.textContent = `前回: ${prevFatLog.body_fat.toFixed(1)}%`;
+        fInp.placeholder = `前回: ${prevFatLog.body_fat.toFixed(1)}`;
+      } else {
+        fHint.textContent = '';
+        fInp.placeholder = '空欄OK';
+      }
+
+      const banner = document.getElementById('bodyOverwriteBanner');
+      const bannerTxt = document.getElementById('bodyOverwriteText');
+      const submitBtn = document.getElementById('btnSubmitBody');
+
+      if (existingSameDay) {
+        const curW = existingSameDay.weight != null ? `${existingSameDay.weight.toFixed(1)}kg` : '--';
+        const curF = existingSameDay.body_fat != null ? ` / ${existingSameDay.body_fat.toFixed(1)}%` : '';
+        bannerTxt.innerHTML = `📝 <strong>${esc(targetDate)}</strong> の記録（${curW}${curF}）あり → 保存すると上書きします`;
+        banner.classList.add('show');
+        submitBtn.textContent = `${targetDate} の記録を上書き保存`;
+        submitBtn.className = 'btn btn-warn';
+      } else {
+        banner.classList.remove('show');
+        submitBtn.textContent = '体重・体脂肪を記録する';
+        submitBtn.className = 'btn btn-teal';
+      }
+    }
+
+    function loadExistingBodyForDate() {
+      const targetDate = getTargetBodyDateStr();
+      const existing = state.bodyLogs.find(b => b.date === targetDate);
+      if (!existing) return;
+      document.getElementById('inpBodyWeight').value = existing.weight != null ? existing.weight : '';
+      document.getElementById('inpBodyFat').value = existing.body_fat != null ? existing.body_fat : '';
+      document.getElementById('inpBodyMemo').value = existing.memo || '';
+      toast(`${targetDate} の記録を読み込みました`);
+    }
+
+    function submitBodyLog() {
+      const wRaw = document.getElementById('inpBodyWeight').value.trim();
+      const fRaw = document.getElementById('inpBodyFat').value.trim();
+      const memo = document.getElementById('inpBodyMemo').value.trim();
+
+      if (wRaw === '') return toast('体重を入力してください');
+      const weight = Math.round(Number(wRaw) * 10) / 10;
+      if (isNaN(weight) || weight <= 0 || weight >= 500) {
+        return toast('体重を正しい数値で入力してください');
+      }
+
+      let bodyFat = null;
+      if (fRaw !== '') {
+        bodyFat = Math.round(Number(fRaw) * 10) / 10;
+        if (isNaN(bodyFat) || bodyFat < 0 || bodyFat > 100) {
+          return toast('体脂肪率を0〜100の間で入力してください');
+        }
+      }
+
+      let dateStr;
+      let timestampStr;
+      if (state.useBodyCustomDateTime) {
+        const customDate = document.getElementById('inpBodyDate').value;
+        const customTime = document.getElementById('inpBodyTime').value || '00:00';
+        if (!customDate) return toast('測定日を選択してください');
+        dateStr = customDate;
+        timestampStr = `${customDate} ${customTime}:00`;
+      } else {
+        const now = new Date();
+        dateStr = formatDateJst(now);
+        timestampStr = now.toISOString();
+      }
+
+      const existing = state.bodyLogs.find(b => b.date === dateStr);
+      const isOverwrite = Boolean(existing);
+      const isMobile = /iPhone|Android/i.test(navigator.userAgent);
+
+      const log = {
+        log_id: existing
+          ? existing.log_id
+          : (crypto.randomUUID ? crypto.randomUUID() : ('b_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7))),
+        timestamp: timestampStr,
+        date: dateStr,
+        weight,
+        body_fat: bodyFat,
+        memo,
+        device: isMobile ? 'mobile' : 'pc',
+        _unsynced: true
+      };
+
+      upsertLocalBodyLog(log);
+
+      document.getElementById('inpBodyWeight').value = '';
+      document.getElementById('inpBodyFat').value = '';
+      document.getElementById('inpBodyMemo').value = '';
+      if (state.useBodyCustomDateTime) toggleBodyCustomDateTime(true);
+
+      updateBodyInputContext();
+      renderRecentBodyList();
+      renderBodyHistoryView();
+      updateSyncBadge();
+
+      toast(isOverwrite ? `${dateStr} の体重・体脂肪を上書きしました` : '体重・体脂肪を記録しました');
+      flushBodyUpsertQueue();
+    }
+
+    function upsertLocalBodyLog(log) {
+      state.bodyLogs = state.bodyLogs.filter(b => b.log_id !== log.log_id && b.date !== log.date);
+      state.bodyLogs.push(log);
+
+      state.bodyDeleteQueue = state.bodyDeleteQueue.filter(id => id !== log.log_id);
+      state.bodyUpsertQueue = state.bodyUpsertQueue.filter(q => q.log_id !== log.log_id && q.date !== log.date);
+      state.bodyUpsertQueue.push({
+        log_id: log.log_id,
+        timestamp: log.timestamp,
+        date: log.date,
+        weight: log.weight,
+        body_fat: log.body_fat,
+        memo: log.memo,
+        device: log.device
+      });
+
+      persistLocal();
+    }
+
+    function buildPrevBodyWeightMap() {
+      const asc = getBodyLogsSortedAsc();
+      const prevMap = new Map();
+      let prevWeight = null;
+      asc.forEach(b => {
+        prevMap.set(b.log_id, prevWeight);
+        if (b.weight != null) prevWeight = b.weight;
+      });
+      return prevMap;
+    }
+
+    function formatWeightDeltaBadge(curWeight, prevWeight) {
+      if (curWeight == null || prevWeight == null) return '';
+      const diff = Math.round((curWeight - prevWeight) * 10) / 10;
+      if (diff === 0) return '<span class="delta-pill delta-flat">±0.0kg</span>';
+      if (diff < 0) return `<span class="delta-pill delta-down">${diff.toFixed(1)}kg</span>`;
+      return `<span class="delta-pill delta-up">+${diff.toFixed(1)}kg</span>`;
+    }
+
+    function renderBodyLogRowHtml(b, prevMap) {
+      const prevW = prevMap.get(b.log_id);
+      const deltaHtml = formatWeightDeltaBadge(b.weight, prevW);
+      const weightText = b.weight != null ? `${b.weight.toFixed(1)} kg` : '-- kg';
+      const fatText = b.body_fat != null ? `${b.body_fat.toFixed(1)} %` : '';
+      const unsyncedBadge = b._unsynced ? '<span class="badge badge-off">未同期</span>' : '';
+
+      return `
+        <div class="list-item" style="align-items:flex-start;">
+          <div style="min-width:0; flex:1;">
+            <div style="display:flex; align-items:center; flex-wrap:wrap; gap:4px;">
+              <span class="badge badge-teal">⚖️ ${esc(b.date)}</span>
+              ${unsyncedBadge}
+            </div>
+            <div style="margin-top:4px; font-size:15px; font-weight:800;">
+              ${weightText}${deltaHtml}
+              ${fatText ? `<span style="font-size:13px; font-weight:700; color:#7c3aed; margin-left:8px;">体脂肪 ${fatText}</span>` : ''}
+            </div>
+            ${b.memo ? `<div style="margin-top:3px; word-break:break-word; color:var(--text);">${esc(b.memo)}</div>` : ''}
+            <div style="font-size:11px; color:var(--muted); margin-top:2px;">${esc(formatDateTime(b))}</div>
+          </div>
+          <div style="text-align:right; white-space:nowrap;">
+            <div class="item-actions" style="margin-top:2px;">
+              <button class="btn-edit-mini" onclick="openEditBodyModal('${escAttr(b.log_id)}')">編集</button>
+              <button class="btn-del-mini" onclick="deleteBodyLog('${escAttr(b.log_id)}')">削除</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderRecentBodyList() {
+      const listEl = document.getElementById('recentBodyList');
+      const items = getBodyLogsSortedDesc().slice(0, 10);
+      if (!items.length) {
+        listEl.innerHTML = '<div style="color:var(--muted);font-size:13px;">まだ体重・体脂肪の記録がありません</div>';
+        return;
+      }
+      const prevMap = buildPrevBodyWeightMap();
+      listEl.innerHTML = items.map(b => renderBodyLogRowHtml(b, prevMap)).join('');
+    }
+
+    function openEditBodyModal(logId) {
+      const b = state.bodyLogs.find(x => x.log_id === logId);
+      if (!b) return;
+      const dt = extractDateAndTime(b);
+      document.getElementById('editBodyLogId').value = b.log_id;
+      document.getElementById('editBodyDate').value = dt.date || b.date || formatDateJst(new Date());
+      document.getElementById('editBodyTime').value = dt.time || '07:00';
+      document.getElementById('editBodyWeight').value = b.weight != null ? b.weight : '';
+      document.getElementById('editBodyFat').value = b.body_fat != null ? b.body_fat : '';
+      document.getElementById('editBodyMemo').value = b.memo || '';
+      document.getElementById('editBodyModal').classList.add('open');
+    }
+
+    function closeEditBodyModal() {
+      document.getElementById('editBodyModal').classList.remove('open');
+    }
+
+    async function saveEditedBodyLog() {
+      const logId = document.getElementById('editBodyLogId').value;
+      const orig = state.bodyLogs.find(x => x.log_id === logId);
+      if (!orig) return closeEditBodyModal();
+
+      const newDate = document.getElementById('editBodyDate').value;
+      const newTime = document.getElementById('editBodyTime').value || '00:00';
+      const wRaw = document.getElementById('editBodyWeight').value.trim();
+      const fRaw = document.getElementById('editBodyFat').value.trim();
+      const memo = document.getElementById('editBodyMemo').value.trim();
+
+      if (!newDate) return toast('記録日を入力してください');
+      if (wRaw === '') return toast('体重を入力してください');
+      const weight = Math.round(Number(wRaw) * 10) / 10;
+      if (isNaN(weight) || weight <= 0 || weight >= 500) return toast('体重を正しく入力してください');
+
+      let bodyFat = null;
+      if (fRaw !== '') {
+        bodyFat = Math.round(Number(fRaw) * 10) / 10;
+        if (isNaN(bodyFat) || bodyFat < 0 || bodyFat > 100) return toast('体脂肪率は0〜100で入力してください');
+      }
+
+      const conflict = state.bodyLogs.find(x => x.date === newDate && x.log_id !== logId);
+      if (conflict) {
+        const cText = `${conflict.weight != null ? conflict.weight.toFixed(1) + 'kg' : '--'}${conflict.body_fat != null ? ' / ' + conflict.body_fat.toFixed(1) + '%' : ''}`;
+        if (!confirm(`${newDate} には既に別の記録（${cText}）があります。\nこの内容で上書き統合しますか？`)) {
+          return;
+        }
+      }
+
+      const updated = {
+        log_id: logId,
+        timestamp: `${newDate} ${newTime}:00`,
+        date: newDate,
+        weight,
+        body_fat: bodyFat,
+        memo,
+        device: orig.device || 'web',
+        _unsynced: true
+      };
+
+      closeEditBodyModal();
+      upsertLocalBodyLog(updated);
+
+      updateBodyInputContext();
+      renderRecentBodyList();
+      renderBodyHistoryView();
+      updateSyncBadge();
+
+      const synced = await flushBodyUpsertQueue();
+      toast(synced ? '体重・体脂肪を更新しました' : '端末に反映しました（次回同期時にシートへ反映）');
+    }
+
+    async function deleteBodyLog(logId) {
+      const b = state.bodyLogs.find(x => x.log_id === logId);
+      if (!b) return;
+
+      const summary = [
+        `${formatDateTime(b)}`,
+        `体重: ${b.weight != null ? b.weight.toFixed(1) + 'kg' : '--'}${b.body_fat != null ? ` / 体脂肪: ${b.body_fat.toFixed(1)}%` : ''}`,
+        b.memo ? b.memo : ''
+      ].filter(Boolean).join('\n');
+
+      if (!confirm(`この体重・体脂肪の記録を削除しますか？\n\n${summary}`)) return;
+
+      state.bodyLogs = state.bodyLogs.filter(x => x.log_id !== logId);
+      state.bodyUpsertQueue = state.bodyUpsertQueue.filter(q => q.log_id !== logId);
+      if (!state.bodyDeleteQueue.includes(logId)) {
+        state.bodyDeleteQueue.push(logId);
+      }
+
+      persistLocal();
+      updateBodyInputContext();
+      renderRecentBodyList();
+      renderBodyHistoryView();
+      updateSyncBadge();
+
+      const synced = await flushBodyDeleteQueue();
+      toast(synced ? '記録を削除しました' : '端末から削除しました（次回同期時にシートへ反映）');
     }
 
     // ====== AI分類候補のワンタップ承認 ======
@@ -1449,7 +2072,7 @@
       await applyRecordUpdate(rec, updatedFields, `確定しました: ${cat.cat1} › ${cat.cat2} › ${cat.cat3}`);
     }
 
-    // ====== 編集モーダル（大→中→小 3段階連動 ＋ 保存して次の未分類へ） ======
+    // ====== ライフログ編集モーダル ======
     function getEditModalCatPool() {
       const list = [...activeCategories()];
       if (state.editModalLegacyCat && !list.some(c => c.category_id === state.editModalLegacyCat.category_id)) {
@@ -1848,7 +2471,29 @@
       listEl.innerHTML = items.map(renderRecordRowHtml).join('');
     }
 
-    // ====== 2. 記録（履歴検索）タブ ======
+    // ====== 2-A. 記録（ライフログ履歴検索）タブ ======
+    function getPeriodDateRange(periodKey) {
+      const now = new Date();
+      let startDate = '';
+      let endDate = '';
+      if (periodKey === 'this_month') {
+        const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        startDate = ym + '-01';
+      } else if (periodKey === 'last_month') {
+        const first = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const last = new Date(now.getFullYear(), now.getMonth(), 0);
+        startDate = formatDateJst(first);
+        endDate = formatDateJst(last);
+      } else if (periodKey === '7d') {
+        const d = new Date(now); d.setDate(d.getDate() - 6);
+        startDate = formatDateJst(d);
+      } else if (periodKey === '30d') {
+        const d = new Date(now); d.setDate(d.getDate() - 29);
+        startDate = formatDateJst(d);
+      }
+      return { startDate, endDate };
+    }
+
     function toggleUnassignedOnlyFilter() {
       state.histFilter.unassignedOnly = !state.histFilter.unassignedOnly;
       if (state.histFilter.unassignedOnly) {
@@ -1956,26 +2601,7 @@
 
     function getFilteredHistoryRecords() {
       const f = state.histFilter;
-      const now = new Date();
-      let startDate = '';
-      let endDate = '';
-
-      if (f.period === 'this_month') {
-        const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-        startDate = ym + '-01';
-      } else if (f.period === 'last_month') {
-        const first = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        const last = new Date(now.getFullYear(), now.getMonth(), 0);
-        startDate = formatDateJst(first);
-        endDate = formatDateJst(last);
-      } else if (f.period === '7d') {
-        const d = new Date(now); d.setDate(d.getDate() - 6);
-        startDate = formatDateJst(d);
-      } else if (f.period === '30d') {
-        const d = new Date(now); d.setDate(d.getDate() - 29);
-        startDate = formatDateJst(d);
-      }
-
+      const { startDate, endDate } = getPeriodDateRange(f.period);
       const kw = (f.keyword || '').toLowerCase();
 
       return state.records
@@ -2033,16 +2659,94 @@
       renderHistoryList();
     }
 
-    // ====== 3. 6期間グラフ分析 ======
+    // ====== 2-B. 記録（体重・体脂肪履歴）タブ ======
+    function onBodyHistoryFilterChange() {
+      state.histBodyFilter.period = document.getElementById('histBodyPeriod').value;
+      state.histBodyFilter.keyword = document.getElementById('histBodyKeyword').value.trim();
+      state.histBodyLimit = 50;
+      renderBodyHistoryView();
+    }
+
+    function resetBodyHistoryFilter() {
+      state.histBodyFilter = { period: 'all', keyword: '' };
+      state.histBodyLimit = 50;
+      document.getElementById('histBodyPeriod').value = 'all';
+      document.getElementById('histBodyKeyword').value = '';
+      renderBodyHistoryView();
+    }
+
+    function loadMoreBodyHistory() {
+      state.histBodyLimit += 50;
+      renderBodyHistoryView();
+    }
+
+    function renderBodyHistoryView() {
+      const f = state.histBodyFilter;
+      document.getElementById('histBodyPeriod').value = f.period;
+      if (document.getElementById('histBodyKeyword').value !== f.keyword) {
+        document.getElementById('histBodyKeyword').value = f.keyword;
+      }
+
+      const { startDate, endDate } = getPeriodDateRange(f.period);
+      const kw = (f.keyword || '').toLowerCase();
+
+      const filtered = getBodyLogsSortedDesc().filter(b => {
+        if (startDate && b.date < startDate) return false;
+        if (endDate && b.date > endDate) return false;
+        if (kw && !`${b.memo || ''} ${b.date || ''}`.toLowerCase().includes(kw)) return false;
+        return true;
+      });
+
+      const weights = filtered.map(b => b.weight).filter(v => v != null);
+      const fats = filtered.map(b => b.body_fat).filter(v => v != null);
+
+      const avgW = weights.length ? (weights.reduce((a, v) => a + v, 0) / weights.length) : null;
+      const avgF = fats.length ? (fats.reduce((a, v) => a + v, 0) / fats.length) : null;
+
+      document.getElementById('histBodyAvgWeight').textContent = avgW != null ? `${avgW.toFixed(1)} kg` : '-- kg';
+      document.getElementById('histBodyAvgFat').textContent = avgF != null ? `${avgF.toFixed(1)} %` : '-- %';
+
+      const deltaEl = document.getElementById('histBodyDelta');
+      if (weights.length >= 2) {
+        const diff = Math.round((weights[0] - weights[weights.length - 1]) * 10) / 10;
+        const sign = diff > 0 ? '+' : (diff === 0 ? '±' : '');
+        deltaEl.textContent = `${sign}${diff.toFixed(1)} kg`;
+        deltaEl.style.color = diff < 0 ? 'var(--success)' : (diff > 0 ? 'var(--danger)' : 'var(--text)');
+      } else {
+        deltaEl.textContent = '--';
+        deltaEl.style.color = 'var(--text)';
+      }
+
+      const shown = filtered.slice(0, state.histBodyLimit);
+      document.getElementById('histBodyListTitle').textContent =
+        filtered.length > shown.length
+          ? `⚖️ 体重・体脂肪一覧（${shown.length} / ${filtered.length} 件表示）`
+          : `⚖️ 体重・体脂肪一覧（${filtered.length} 件）`;
+
+      const listEl = document.getElementById('historyBodyList');
+      if (!filtered.length) {
+        listEl.innerHTML = '<div style="color:var(--muted);font-size:13px;">条件に一致する記録がありません</div>';
+      } else {
+        const prevMap = buildPrevBodyWeightMap();
+        listEl.innerHTML = shown.map(b => renderBodyLogRowHtml(b, prevMap)).join('');
+      }
+
+      document.getElementById('histBodyLoadMoreWrap').style.display = filtered.length > shown.length ? 'block' : 'none';
+    }
+
+    // ====== 3. 6期間グラフ分析（支出・カロリー・体重/体脂肪） ======
     function renderCharts() {
       const p = state.period;
       const now = new Date();
       const buckets = buildBuckets(p, now);
       const startKey = buckets[0].startDate;
       const inRange = state.records.filter(r => r.date >= startKey);
+      const inRangeBody = getBodyLogsSortedAsc().filter(b => b.date >= startKey);
 
       const bucketMap = new Map();
-      buckets.forEach(b => bucketMap.set(b.key, { ...b, spend: 0, dayCalMap: new Map() }));
+      buckets.forEach(b => bucketMap.set(b.key, {
+        ...b, spend: 0, dayCalMap: new Map(), weights: [], fats: []
+      }));
 
       const catSpendMap = new Map();
       let totalSpend = 0;
@@ -2063,6 +2767,14 @@
         }
       });
 
+      inRangeBody.forEach(bLog => {
+        const bKey = getBucketKey(p, bLog.date);
+        const b = bucketMap.get(bKey);
+        if (!b) return;
+        if (bLog.weight != null) b.weights.push(bLog.weight);
+        if (bLog.body_fat != null) b.fats.push(bLog.body_fat);
+      });
+
       const arr = [...bucketMap.values()];
       const labels = arr.map(b => b.label);
       const spendData = arr.map(b => Math.round(b.spend));
@@ -2070,6 +2782,16 @@
         if (!b.dayCalMap.size) return 0;
         const sum = [...b.dayCalMap.values()].reduce((a, v) => a + v, 0);
         return p === 'daily' ? Math.round(sum) : Math.round(sum / b.dayCalMap.size);
+      });
+      const weightData = arr.map(b => {
+        if (!b.weights.length) return null;
+        const avg = b.weights.reduce((a, v) => a + v, 0) / b.weights.length;
+        return Math.round(avg * 10) / 10;
+      });
+      const fatData = arr.map(b => {
+        if (!b.fats.length) return null;
+        const avg = b.fats.reduce((a, v) => a + v, 0) / b.fats.length;
+        return Math.round(avg * 10) / 10;
       });
 
       const periodDays = Math.max(1, Math.round((now - new Date(startKey)) / 86400000) + 1);
@@ -2080,8 +2802,71 @@
       document.getElementById('kpiCalAvg').textContent = (calDays ? Math.round(calSum / calDays).toLocaleString() : 0) + ' kcal';
       document.getElementById('kpiCount').textContent = inRange.length + ' 件';
 
+      // 体重・体脂肪 KPI（期間内優先、0件なら全期間の最新を参考表示）
+      const allBodyDesc = getBodyLogsSortedDesc();
+      const latestWInRange = [...inRangeBody].reverse().find(b => b.weight != null);
+      const firstWInRange = inRangeBody.find(b => b.weight != null);
+      const latestWAny = allBodyDesc.find(b => b.weight != null);
+
+      const kpiWEl = document.getElementById('kpiLatestWeight');
+      const kpiWDiffEl = document.getElementById('kpiLatestWeightDiff');
+      if (latestWInRange) {
+        kpiWEl.textContent = `${latestWInRange.weight.toFixed(1)} kg`;
+        if (firstWInRange && firstWInRange.log_id !== latestWInRange.log_id) {
+          const diff = Math.round((latestWInRange.weight - firstWInRange.weight) * 10) / 10;
+          const sign = diff > 0 ? '+' : (diff === 0 ? '±' : '');
+          kpiWDiffEl.textContent = `期間開始比 ${sign}${diff.toFixed(1)} kg`;
+          kpiWDiffEl.style.color = diff < 0 ? 'var(--success)' : (diff > 0 ? 'var(--danger)' : 'var(--muted)');
+        } else {
+          kpiWDiffEl.textContent = `${latestWInRange.date.slice(5).replace('-', '/')} 計測（比較データ1件）`;
+          kpiWDiffEl.style.color = 'var(--muted)';
+        }
+      } else if (latestWAny) {
+        kpiWEl.textContent = `${latestWAny.weight.toFixed(1)} kg`;
+        kpiWDiffEl.textContent = `期間内記録なし（最終 ${latestWAny.date.slice(5).replace('-', '/')}）`;
+        kpiWDiffEl.style.color = 'var(--muted)';
+      } else {
+        kpiWEl.textContent = '-- kg';
+        kpiWDiffEl.textContent = '記録なし';
+        kpiWDiffEl.style.color = 'var(--muted)';
+      }
+
+      const latestFInRange = [...inRangeBody].reverse().find(b => b.body_fat != null);
+      const firstFInRange = inRangeBody.find(b => b.body_fat != null);
+      const latestFAny = allBodyDesc.find(b => b.body_fat != null);
+      const kpiFEl = document.getElementById('kpiLatestFat');
+      const kpiFSubEl = document.getElementById('kpiLatestFatSub');
+
+      if (latestFInRange) {
+        kpiFEl.textContent = `${latestFInRange.body_fat.toFixed(1)} %`;
+        if (firstFInRange && firstFInRange.log_id !== latestFInRange.log_id) {
+          const diff = Math.round((latestFInRange.body_fat - firstFInRange.body_fat) * 10) / 10;
+          const sign = diff > 0 ? '+' : (diff === 0 ? '±' : '');
+          kpiFSubEl.textContent = `期間開始比 ${sign}${diff.toFixed(1)} %`;
+          kpiFSubEl.style.color = diff < 0 ? 'var(--success)' : (diff > 0 ? 'var(--danger)' : 'var(--muted)');
+        } else {
+          kpiFSubEl.textContent = `${latestFInRange.date.slice(5).replace('-', '/')} 計測`;
+          kpiFSubEl.style.color = 'var(--muted)';
+        }
+      } else if (latestFAny) {
+        kpiFEl.textContent = `${latestFAny.body_fat.toFixed(1)} %`;
+        kpiFSubEl.textContent = `期間内記録なし（最終 ${latestFAny.date.slice(5).replace('-', '/')}）`;
+        kpiFSubEl.style.color = 'var(--muted)';
+      } else {
+        kpiFEl.textContent = '-- %';
+        kpiFSubEl.textContent = '記録なし';
+        kpiFSubEl.style.color = 'var(--muted)';
+      }
+
       document.getElementById('calChartTitle').textContent =
         p === 'daily' ? '🔥 摂取カロリー（日合計・赤線＝目標）' : '🔥 摂取カロリー（1日平均・赤線＝目標）';
+
+      const targetWeight = state.settings.targetWeight != null && state.settings.targetWeight !== '' && Number(state.settings.targetWeight) > 0
+        ? Number(state.settings.targetWeight)
+        : null;
+      document.getElementById('bodyChartTitle').textContent =
+        (p === 'daily' ? '⚖️ 体重・体脂肪の推移' : '⚖️ 体重・体脂肪の推移（期間平均）') +
+        (targetWeight ? `（赤線＝目標 ${targetWeight.toFixed(1)}kg）` : '');
 
       drawChart('spend', 'spendChart', {
         type: 'bar',
@@ -2103,6 +2888,71 @@
           ]
         },
         options: { responsive: true, maintainAspectRatio: false }
+      });
+
+      // 体重・体脂肪 2軸折れ線グラフ
+      const bodyDatasets = [
+        {
+          label: '体重(kg)',
+          data: weightData,
+          yAxisID: 'y',
+          borderColor: '#0d9488',
+          backgroundColor: 'rgba(13, 148, 136, 0.12)',
+          borderWidth: 2.5,
+          tension: 0.25,
+          spanGaps: true,
+          pointRadius: 3.5,
+          order: 2
+        },
+        {
+          label: '体脂肪(%)',
+          data: fatData,
+          yAxisID: 'y1',
+          borderColor: '#8b5cf6',
+          backgroundColor: 'rgba(139, 92, 246, 0.12)',
+          borderWidth: 2,
+          tension: 0.25,
+          spanGaps: true,
+          pointRadius: 3,
+          order: 3
+        }
+      ];
+      if (targetWeight !== null) {
+        bodyDatasets.push({
+          label: '目標体重',
+          data: labels.map(() => targetWeight),
+          yAxisID: 'y',
+          borderColor: '#dc2626',
+          borderWidth: 2,
+          borderDash: [5, 5],
+          pointRadius: 0,
+          order: 1
+        });
+      }
+
+      drawChart('body', 'bodyChart', {
+        type: 'line',
+        data: { labels, datasets: bodyDatasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          scales: {
+            y: {
+              type: 'linear',
+              position: 'left',
+              grace: '5%',
+              title: { display: true, text: '体重 (kg)', font: { size: 11 } }
+            },
+            y1: {
+              type: 'linear',
+              position: 'right',
+              grace: '5%',
+              grid: { drawOnChartArea: false },
+              title: { display: true, text: '体脂肪 (%)', font: { size: 11 } }
+            }
+          }
+        }
       });
 
       const pieLabels = [...catSpendMap.keys()];
@@ -2263,10 +3113,12 @@
     // ====== 5. 設定・GAS通信・同期 ======
     function saveSettings() {
       const inputToken = document.getElementById('setToken').value.trim();
+      const targetWeightRaw = document.getElementById('setTargetWeight').value.trim();
       state.settings = {
         gasUrl: document.getElementById('setGasUrl').value.trim(),
         token: inputToken !== '' ? inputToken : (state.settings.token || ''),
-        targetCal: Number(document.getElementById('setTargetCal').value || 2000)
+        targetCal: Number(document.getElementById('setTargetCal').value || 2000),
+        targetWeight: targetWeightRaw !== '' ? Number(targetWeightRaw) : null
       };
       localStorage.setItem(KEYS.settings, JSON.stringify(state.settings));
       refreshTokenFieldUI();
@@ -2365,6 +3217,47 @@
       }
     }
 
+    async function flushBodyUpsertQueue() {
+      if (!state.bodyUpsertQueue.length || !navigator.onLine || !state.settings.gasUrl || !state.settings.token) {
+        updateSyncBadge();
+        return false;
+      }
+      const batch = [...state.bodyUpsertQueue];
+      try {
+        await postGas({ action: 'upsert_body_logs', body_logs: batch });
+        const sentIds = new Set(batch.map(x => x.log_id));
+        state.bodyUpsertQueue = state.bodyUpsertQueue.filter(x => !sentIds.has(x.log_id));
+        state.bodyLogs.forEach(b => { if (sentIds.has(b.log_id)) delete b._unsynced; });
+        persistLocal();
+        renderRecentBodyList();
+        renderBodyHistoryView();
+        updateSyncBadge();
+        return true;
+      } catch (_) {
+        updateSyncBadge();
+        return false;
+      }
+    }
+
+    async function flushBodyDeleteQueue() {
+      if (!state.bodyDeleteQueue.length || !navigator.onLine || !state.settings.gasUrl || !state.settings.token) {
+        updateSyncBadge();
+        return false;
+      }
+      const batch = [...state.bodyDeleteQueue];
+      try {
+        await postGas({ action: 'delete_body_logs', log_ids: batch });
+        const doneIds = new Set(batch);
+        state.bodyDeleteQueue = state.bodyDeleteQueue.filter(id => !doneIds.has(id));
+        persistLocal();
+        updateSyncBadge();
+        return true;
+      } catch (_) {
+        updateSyncBadge();
+        return false;
+      }
+    }
+
     async function syncAll(showMsg) {
       if (!state.settings.gasUrl || !state.settings.token) {
         updateSyncBadge();
@@ -2374,6 +3267,8 @@
       await flushQueue();
       await flushUpdateQueue();
       await flushDeleteQueue();
+      await flushBodyUpsertQueue();
+      await flushBodyDeleteQueue();
 
       if (state.autoRulesDirty && navigator.onLine) {
         try {
@@ -2390,6 +3285,8 @@
         if (!data.ok) throw new Error(data.error);
 
         state.categories = data.categories;
+
+        // records 同期マージ
         const pendingDelSet = new Set(state.deleteQueue);
         const pendingUpdMap = new Map(state.updateQueue.map(u => [u.record_id, u]));
 
@@ -2400,6 +3297,21 @@
         const serverIds = new Set(serverRecords.map(r => r.record_id));
         const pendingLocal = state.queue.filter(r => !serverIds.has(r.record_id) && !pendingDelSet.has(r.record_id));
         state.records = [...serverRecords, ...pendingLocal];
+
+        // bodyLogs 同期マージ（1日1件を保ちつつ未送信キューを優先反映）
+        const pendingBodyDelSet = new Set(state.bodyDeleteQueue);
+        const pendingBodyUpsertIds = new Set(state.bodyUpsertQueue.map(b => b.log_id));
+        const pendingBodyUpsertDates = new Set(state.bodyUpsertQueue.map(b => b.date));
+
+        const serverBodyLogs = (data.bodyLogs || []).filter(b =>
+          !pendingBodyDelSet.has(b.log_id) &&
+          !pendingBodyUpsertIds.has(b.log_id) &&
+          !pendingBodyUpsertDates.has(b.date)
+        );
+        const pendingBodyLocal = state.bodyUpsertQueue
+          .filter(b => !pendingBodyDelSet.has(b.log_id))
+          .map(b => ({ ...b, _unsynced: true }));
+        state.bodyLogs = [...serverBodyLogs, ...pendingBodyLocal];
 
         if (data.autoRules && !state.autoRulesDirty) {
           const srvEmpty = !data.autoRules.fallbackCatId && !(data.autoRules.rules && data.autoRules.rules.length);
@@ -2440,7 +3352,14 @@
 
     function updateSyncBadge() {
       const el = document.getElementById('syncStatus');
-      const pendingCount = state.queue.length + state.updateQueue.length + state.deleteQueue.length + (state.autoRulesDirty ? 1 : 0);
+      const pendingCount =
+        state.queue.length +
+        state.updateQueue.length +
+        state.deleteQueue.length +
+        state.bodyUpsertQueue.length +
+        state.bodyDeleteQueue.length +
+        (state.autoRulesDirty ? 1 : 0);
+
       if (!state.settings.gasUrl) {
         el.textContent = '未設定'; el.className = 'status-pill';
       } else if (pendingCount > 0) {
@@ -2456,12 +3375,18 @@
       localStorage.setItem(KEYS.queue, JSON.stringify(state.queue));
       localStorage.setItem(KEYS.updateQueue, JSON.stringify(state.updateQueue));
       localStorage.setItem(KEYS.deleteQueue, JSON.stringify(state.deleteQueue));
+      localStorage.setItem(KEYS.bodyLogs, JSON.stringify(state.bodyLogs));
+      localStorage.setItem(KEYS.bodyUpsertQueue, JSON.stringify(state.bodyUpsertQueue));
+      localStorage.setItem(KEYS.bodyDeleteQueue, JSON.stringify(state.bodyDeleteQueue));
     }
 
     function renderAll() {
       renderInputControls();
       renderRecentList();
+      updateBodyInputContext();
+      renderRecentBodyList();
       renderHistoryView();
+      renderBodyHistoryView();
       renderCategoryManager();
       renderAutoRuleSettings();
       renderShortcutUrlSelect();
